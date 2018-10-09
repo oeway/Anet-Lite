@@ -17,7 +17,7 @@ def make_generator(source, batch_size=1, batch_num=None):
                 y = np.stack(y, axis=0)
                 m, s = x.mean(), x.std()+EPS
                 x = (x-m)/s
-                y = y/y.max()
+                y = y/(y.max()+EPS)
                 yield x, y
                 x, y = [], []
                 count += 1

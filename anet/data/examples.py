@@ -2,7 +2,9 @@ import os
 import random
 from anet.data.datasets import TUBULIN
 from anet.data.image_utils import *
-from anet.data.folder_dataset import FolderDataset
+from anet.data.folder_dataset import FolderDataset, SubfolderDataset
+from anet.data.file_loader import ImageLoader
+
 EPS = 0.0001
 
 class TransformedTubulin001():
@@ -122,7 +124,7 @@ class DriftingTubulin001(TransformedTubulin001):
         super(DriftingTubulin001, self).__init__(opt)
         self.wfBlur = GaussianBlurring(sigma=['uniform', 6, 8])
         self.wfNoise = AddGaussianNoise(mean=0, sigma=['uniform', 0.5, 1.5])
-        self.shift_range = 16 
+        self.shift_range = 16
 
     def transform_train(self, imageIO):
         img = self.iMerge(imageIO.copy())
@@ -317,7 +319,7 @@ class TransformedLRSR():
             assert self.dim_ordering == 'channels_last'
         return {'A': imgin, 'B': imgout, 'path': path}
 
-    
+
 class TransformedLRSR002(TransformedLRSR):
     def transform_train(self, imageAB):
         As, Bs, path = imageAB['image']['A'], imageAB['image']['B'], imageAB['image.path']
@@ -353,3 +355,79 @@ class TransformedLRSR002(TransformedLRSR):
         else:
             assert self.dim_ordering == 'channels_last'
         return {'A': imgin, 'B': imgout, 'path': path}
+
+
+class GenericTransformedImages():
+    def __init__(self, opt):
+        train_crop_size1 = int(opt.input_size * 1.45) #pre-crop
+        train_crop_size2 = opt.input_size
+        train_crop_size3 = opt.input_size
+        test_size = opt.input_size
+
+        self.ptrain = os.path.join(opt.work_dir, 'train') #'./datasets/Christian-TMR-IF-v0.1/train'
+        self.pvalid = os.path.join(opt.work_dir, 'valid')
+        self.ptest = os.path.join(opt.work_dir, 'test') #'./datasets/Christian-TMR-IF-v0.1/test'
+        self.input_channels = opt.input_channels #{'image': {'filter': self.folder_filter, 'loader': ImageLoader()} }
+        self.output_channels = opt.output_channels
+
+        # prepare the transforms
+        self.iMerge = Merge()
+        self.iElastic = ElasticTransform(alpha=1000, sigma=40)
+        self.iSplit = Split([0, len(self.input_channels)], [len(self.input_channels), len(self.input_channels)+len(self.output_channels)])
+
+        self.iRCropTrain1 = RandomCropNumpy(size=(train_crop_size1, train_crop_size1))
+        self.iRot = RandomRotate()
+        self.iCropTrain2 = CenterCropNumpy(size=(train_crop_size2, train_crop_size2))
+
+        self.iCropTest = CenterCropNumpy(size=(test_size, test_size))
+
+        self.dim_ordering = opt.dim_ordering
+        self.opt = opt
+        self.repeat = 30
+        self.input_channel_names = [n for n, _ in self.input_channels]
+        self.output_channel_names = [n for n, _ in self.output_channels]
+
+    def __getitem__(self, key):
+        if key == 'train':
+            source_train = SubfolderDataset(self.ptrain,
+                             channels = self.input_channels +  self.output_channels,
+                             transform = self.transform_train,
+                             repeat=self.repeat)
+            return source_train
+        elif key == 'valid':
+            source_valid = SubfolderDataset(self.pvalid,
+                             channels = self.input_channels +  self.output_channels,
+                             transform = self.transform_valid,
+                             repeat=self.repeat)
+            return source_valid
+        elif key == 'test':
+            source_test = SubfolderDataset(self.ptest,
+                             channels = self.input_channels,
+                             transform = self.transform_test,
+                             repeat=self.repeat)
+            return source_test
+        else:
+            raise Exception('only train and test are supported.')
+
+    def transform_train(self, images):
+        inputs = [np.expand_dims(np.array(images[n]), axis=2) for n in self.input_channel_names]
+        outputs = [np.expand_dims(np.array(images[n]), axis=2) for n in self.output_channel_names]
+        ios = self.iMerge(inputs + outputs)
+        ios = self.iRCropTrain1(ios)
+        ios = self.iRot(ios)
+        ios = self.iElastic(ios)
+        ios = self.iCropTrain2(ios)
+        inputs, outputs = self.iSplit(ios)
+        return {'A': inputs, 'B': outputs, 'path': images['__path__']}
+
+    def transform_valid(self, images):
+        inputs = [np.expand_dims(np.array(images[n]), axis=2) for n in self.input_channel_names]
+        outputs = [np.expand_dims(np.array(images[n]), axis=2) for n in self.output_channel_names]
+        inputs = self.iCropTest(self.iMerge(inputs))
+        outputs = self.iCropTest(self.iMerge(outputs))
+        return {'A': inputs, 'B': outputs, 'path': images['__path__']}
+
+    def transform_test(self, images):
+        inputs = [np.expand_dims(np.array(images[n]), axis=2) for n in self.input_channel_names]
+        inputs = self.iCropTest(self.iMerge(inputs))
+        return {'A': inputs, 'path': images['__path__']}
