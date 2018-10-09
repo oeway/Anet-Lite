@@ -1,0 +1,80 @@
+﻿
+<docs lang="markdown">
+Describe your plugin here.
+</docs>
+
+<config lang="json">
+{
+  "name": "Untitled Plugin",
+  "mode": "pyworker",
+  "version": "0.1.0",
+  "api_version": "0.1.1",
+  "description": "describe your plugin here.",
+  "tags": [],
+  "ui": "UI for this plugin",
+  "inputs": null,
+  "outputs": null,
+  "icon": null,
+  "env": null,
+  "requirements": ["tensorflow==1.7.0", "tensorflowjs==0.1.2", "keras==2.1.4", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest==3.5.0"],
+  "dependencies": []
+}
+</config>
+
+<script lang="python">
+import sys
+sys.path.insert(0, '/Users/weiouyang/ImJoyWorkspace/default/anet-lite')
+import os
+import numpy as np
+from anet.options import Options
+from anet.data.examples import GenericTransformedImages
+from anet.data.file_loader import ImageLoader
+
+from anet.networks import UnetGenerator, get_dssim_l1_loss
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.models import load_model
+from anet.data.examples import TransformedTubulin001
+from anet.data.utils import make_generator
+from anet.utils import export_model_to_js
+
+# import importlib
+# importlib.reload(UnetGenerator)
+
+import numpy as np
+class PythonPlugin():
+    def __init__(self):
+        opt = Options().parse(['--work_dir=/Users/weiouyang/ImJoyWorkspace/default/unet_data/train'])
+        self.opt = opt
+        # opt.work_dir = '/Users/weiouyang/ImJoyWorkspace/default/unet_data/train'
+        opt.input_channels = [('cell', {'filter':'cells*.png', 'loader':ImageLoader()})]
+        opt.output_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
+        self.model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=16)
+
+        if opt.load_from is not None:
+            self.model.load_weights(opt.load_from)
+
+        DSSIM_L1 = get_dssim_l1_loss()
+        self.model.compile(optimizer='adam',
+                    loss=DSSIM_L1,
+                    metrics=['mse', DSSIM_L1])
+        
+    def setup(self):
+        print('setup in python')
+
+    def export(self, my):
+        opt = self.opt
+        export_model_to_js(self.model, opt.work_dir+'/__js_model__')
+
+    def run(self, my):
+        opt = self.opt
+        sources = GenericTransformedImages(opt)
+
+        tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
+        checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir, 'weights.hdf5'), verbose=1, save_best_only=True)
+        self.model.fit_generator(make_generator(sources['train'], batch_size=opt.batch_size),
+                            validation_data=make_generator(sources['valid'], batch_size=opt.batch_size),
+                            validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, callbacks=[checkpointer, tensorboard])
+
+
+api.export(PythonPlugin())
+</script>

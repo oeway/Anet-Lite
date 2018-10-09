@@ -4,7 +4,7 @@ requirements = ['tensorflow>=1.7.0', 'tensorflowjs>=0.1.2', 'keras>=2.1.4', 'ker
 
 from setuptools import setup, find_packages
 setup(name='anet-lite',
-      version='0.2.0',
+      version='0.3.0',
       description='Light-weight A-net for generic image-to-image translation.',
       url='http://github.com/oeway/Anet-Lite',
       author='Wei OUYANG',
