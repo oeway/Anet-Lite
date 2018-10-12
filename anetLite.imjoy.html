@@ -169,11 +169,7 @@ class ImJoyPlugin():
                 "batch size:{id:'batchsize', type:'number', min:1, placeholder:4}<br>"
                 )
         api.register(name="test", run=self.test, ui="number of images:{id:'num', type:'number', min:1, placeholder:10}<br>")
-        lastPath = await api.getConfig('work_dir')
-        if lastPath is None:
-            work_dir = await api.showFileDialog(root=lastPath)
-            api.setConfig('work_dir', work_dir)
-            self._opt.work_dir = work_dir
+        
 
     async def load_model_weights(self, my):
         if not self._initialized:
@@ -200,7 +196,7 @@ class ImJoyPlugin():
 
         config = my.config
         print(config)
-        opt = Options().parse(['--work_dir={}/unet_data'.format(os.getcwd())])
+        opt = Options().parse(['--work_dir={}'.format(work_dir)])
         opt.work_dir = work_dir
         opt.input_nc = config.input_nc
         opt.target_nc = config.target_nc
