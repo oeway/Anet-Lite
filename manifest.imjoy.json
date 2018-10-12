@@ -1,0 +1,31 @@
+{
+ "name": "ImJoy Repository",
+ "description": "This is a repository for A-net Lite",
+ "version": "0.2.0",
+ "uri_root": "https://raw.githubusercontent.com/oeway/Anet-Lite/master/repository",
+ "plugins": [
+   {
+     "name": "Anet-Lite",
+     "mode": "pyworker",
+     "version": "0.1.0",
+     "api_version": "0.1.1",
+     "description": "A generic plugin for image-to-image translation with A-net.",
+     "tags": [],
+     "ui": ["Generic Image-to-Image Translation",
+           "input channel number: {id:'input_nc', type: 'number', min: 1, placeholder: 1}",
+           "input identifiers: {id:'input_ids', type: 'string', placeholder: 'cell=cells*.png'}",
+           "target channel number: {id:'target_nc', type: 'number', min: 1, placeholder: 1}",
+           "target identifiers: {id:'target_ids', type: 'string', placeholder: 'mask=mask_edge*.png'}",
+           "base filter num: {id:'base_filter_num', type: 'number', min: 8, placeholder: 16}",
+           "input size: {id:'input_size', type: 'number', min: 256, placeholder: 256}"
+       ],
+     "inputs": null,
+     "outputs": null,
+     "icon": null,
+     "env": null,
+     "requirements": ["tensorflow", "tensorflowjs", "keras==2.2.1", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+     "dependencies": [],
+     "uri": "anetLite.imjoy.html"
+   }
+ ]
+}
