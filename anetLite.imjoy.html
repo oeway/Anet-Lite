@@ -142,7 +142,7 @@ class ImJoyPlugin():
 
     def initialize(self, opt):
         # opt.work_dir = '{}/unet_data/train'.format(os.getcwd())
-        self.model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=16)
+        self.model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=opt.base_filter)
 
         if opt.load_from is not None:
             print('loading weights from: ' + opt.load_from)
@@ -179,9 +179,9 @@ class ImJoyPlugin():
         try:
             weight_path = await api.showFileDialog(root=lastPath, type='file')
             if os.path.exists(weight_path):
-                    print('loading weights from: ' + weight_path)
-                    self.model.load_weights(weight_path)
-                    api.showStatus('weights loaded from '+ weight_path)
+                print('loading weights from: ' + weight_path)
+                self.model.load_weights(weight_path)
+                api.showStatus('weights loaded from '+ weight_path)
         except:
             pass
 
@@ -201,6 +201,7 @@ class ImJoyPlugin():
         opt.input_nc = config.input_nc
         opt.target_nc = config.target_nc
         opt.input_size = config.input_size
+        opt.base_filter = config.base_filter_num
         opt.input_channels = []
         for ch in config['input_ids'].split(','):
             name, filter = ch.split('=')
@@ -241,7 +242,7 @@ class ImJoyPlugin():
                 path = paths[b]
                 for i in range(image.shape[2]):
                     im = Image.fromarray(image[:, :, i].astype('float32'))
-                    im.save(path+'_output.tif')
+                    im.save(path+str(i)+'_output.tif')
             api.showProgress(1.0*count/totalsize)
             api.showStatus('making predictions: {}/{}'.format(count, totalsize))
 
