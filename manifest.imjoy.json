@@ -10,7 +10,7 @@
      "version": "0.1.0",
      "api_version": "0.1.1",
      "description": "A generic plugin for image-to-image translation with A-net.",
-     "tags": [],
+     "tags": ["CPU", "GPU"],
      "ui": ["Generic Image-to-Image Translation",
            "input channel number: {id:'input_nc', type: 'number', min: 1, placeholder: 1}",
            "input identifiers: {id:'input_ids', type: 'string', placeholder: 'cell=cells*.png'}",
@@ -22,8 +22,10 @@
      "inputs": null,
      "outputs": null,
      "icon": null,
-     "env": null,
-     "requirements": ["tensorflow", "tensorflowjs", "keras==2.2.1", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+     "env": ["conda create -n anet python=3.6", "git clone https://github.com/oeway/Anet-Lite"],
+     "requirements": {"CPU":["tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                       "GPU": ["tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
+      },
      "dependencies": [],
      "uri": "anetLite.imjoy.html"
    }
