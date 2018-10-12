@@ -22,22 +22,20 @@ def make_generator(source, batch_size=1, batch_num=None):
                 x, y = [], []
                 count += 1
 
-def make_generator_t(source, batch_size=1, batch_num=None):
-    x, y = [], []
+def make_test_generator(source, batch_size=1, batch_num=None):
+    x, path = [], []
     count = 0
-    while batch_num is None or count<batch_num:
-        for d in source:
-            x.append(d['A'])
-            y.append(d['B'])
-            if len(x) >= batch_size:
-                x = np.stack(x, axis=0)
-                y = np.stack(y, axis=0)
-                m, s = x.mean(), x.std()+EPS
-                x = (x-m)/s
-                y = y/y.max()
-                yield [x, y], y
-                x, y = [], []
-                count += 1
+    for d in source:
+        x.append(d['A'])
+        path.append(d['path'])
+        if len(x) >= batch_size:
+            x = np.stack(x, axis=0)
+            m, s = x.mean(), x.std()+EPS
+            x = (x-m)/s
+            yield x, path
+            x, path = [], []
+            count += 1
+    return
 
 def check_integrity(fpath, md5c):
     if not os.path.isfile(fpath):

@@ -106,6 +106,7 @@ def make_subfolder_dataset(rootdir, channels, allow_unpaired=False):
     samples = []
     for subfolder in sorted(os.listdir(rootdir)):
         samplefolder = os.path.join(rootdir, subfolder)
+        if not os.path.isdir(samplefolder): continue
         files = {}
         for ch, v in channels.items():
             chfiles = []

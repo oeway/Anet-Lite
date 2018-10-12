@@ -17,7 +17,7 @@ from anet.utils import export_model_to_js
 opt = Options().parse()
 # opt.work_dir = '/Users/weiouyang/ImJoyWorkspace/default/unet_data/train'
 opt.input_channels = [('cell', {'filter':'cells*.png', 'loader':ImageLoader()})]
-opt.output_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
+opt.target_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
 
 model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=16)
 

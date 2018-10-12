@@ -368,12 +368,12 @@ class GenericTransformedImages():
         self.pvalid = os.path.join(opt.work_dir, 'valid')
         self.ptest = os.path.join(opt.work_dir, 'test') #'./datasets/Christian-TMR-IF-v0.1/test'
         self.input_channels = opt.input_channels #{'image': {'filter': self.folder_filter, 'loader': ImageLoader()} }
-        self.output_channels = opt.output_channels
+        self.target_channels = opt.target_channels
 
         # prepare the transforms
         self.iMerge = Merge()
         self.iElastic = ElasticTransform(alpha=1000, sigma=40)
-        self.iSplit = Split([0, len(self.input_channels)], [len(self.input_channels), len(self.input_channels)+len(self.output_channels)])
+        self.iSplit = Split([0, len(self.input_channels)], [len(self.input_channels), len(self.input_channels)+len(self.target_channels)])
 
         self.iRCropTrain1 = RandomCropNumpy(size=(train_crop_size1, train_crop_size1))
         self.iRot = RandomRotate()
@@ -385,26 +385,26 @@ class GenericTransformedImages():
         self.opt = opt
         self.repeat = 30
         self.input_channel_names = [n for n, _ in self.input_channels]
-        self.output_channel_names = [n for n, _ in self.output_channels]
+        self.output_channel_names = [n for n, _ in self.target_channels]
 
     def __getitem__(self, key):
         if key == 'train':
             source_train = SubfolderDataset(self.ptrain,
-                             channels = self.input_channels +  self.output_channels,
+                             channels = self.input_channels +  self.target_channels,
                              transform = self.transform_train,
                              repeat=self.repeat)
             return source_train
         elif key == 'valid':
             source_valid = SubfolderDataset(self.pvalid,
-                             channels = self.input_channels +  self.output_channels,
+                             channels = self.input_channels +  self.target_channels,
                              transform = self.transform_valid,
-                             repeat=self.repeat)
+                             repeat=1)
             return source_valid
         elif key == 'test':
             source_test = SubfolderDataset(self.ptest,
                              channels = self.input_channels,
                              transform = self.transform_test,
-                             repeat=self.repeat)
+                             repeat=1)
             return source_test
         else:
             raise Exception('only train and test are supported.')

@@ -1,80 +1,266 @@
-﻿
+
 <docs lang="markdown">
-Describe your plugin here.
+# Anet-lite
+
+A generic plugin for image-to-image translation with A-net.
+
+## Usage
+
+### Data preparation
+Your data should be organized according to the following structure
+
+```
+ - train
+    - sample1
+      - channelA.png
+      - channelB.png
+    - sample2
+      - channelA.png
+      - channelB.png
+    - ...
+ - valid
+    - sample20
+      - channelA.png
+      - channelB.png
+    - ...
+ - test
+    - sample43
+      - channelA.png
+    - sample44
+      - channelA.png
+```
+In the above folder structure, `train/valid/test` are three folders, `sample1`...`sample44` are sample folders, within the sample folder, it contains images with different channels.
+
+For the naming, you have to use `train`/`valid`/`test` as the top level folder name, but the sample name can be choose freely.
+You can also choose different channel names (e.g. `DAPI`, `C5`), but you need to make it consistent accross all the sample folder.
+
+These channel names will be used as an identifier for the plugin to recognize them, you will be asked to specify them when you `set working directory`.
+
+### Set working directory
+
+If you have the samples pepared the next step is to `set working directory` to the root folder of your samples.
+
+And you will be asked to specify the identifiers for your plugin.
+
+## Optionally, loading previously trained models
+
+## start the training
+
+The training will relying on two folders named `train` and `valid`, you need to make sure you have them in your working directory.
+
+You can specify a training name, which will be used a prefix for saving models and logs.
+Choose the `epochs`, `step per epoch` and `batch size` you want to train.
+
+Then you can start training by click on the plugin menu.
+
+If the training is done, you will get your model located in the `working directory`, the folder will be called `__model__`.
+
+You can load the file named `*__model__.h5` next time if you want to start another training with this one (aka warm start).
+
+Or you can load the trained model for testing new images.
+
+## Testing/Inferencing
+Place your files with all the input channels in a folder `test` and you will be able to run prediction on them.
+
+By clicking `test` in the plugin menu, you will start the prediction.
+
+Once done, the result will be saved automatically into the testing folder.
+
 </docs>
 
 <config lang="json">
 {
-  "name": "Untitled Plugin",
+  "name": "Anet-Lite",
   "mode": "pyworker",
   "version": "0.1.0",
   "api_version": "0.1.1",
-  "description": "describe your plugin here.",
+  "description": "A generic plugin for image-to-image translation with A-net.",
   "tags": [],
-  "ui": "UI for this plugin",
+  "ui": ["Generic Image-to-Image Translation",
+        "input channel number: {id:'input_nc', type: 'number', min: 1, placeholder: 1}",
+        "input identifiers: {id:'input_ids', type: 'string', placeholder: 'cell=cells*.png'}",
+        "target channel number: {id:'target_nc', type: 'number', min: 1, placeholder: 1}",
+        "target identifiers: {id:'target_ids', type: 'string', placeholder: 'mask=mask_edge*.png'}",
+        "base filter num: {id:'base_filter_num', type: 'number', min: 8, placeholder: 16}",
+        "input size: {id:'input_size', type: 'number', min: 256, placeholder: 256}"
+    ],
   "inputs": null,
   "outputs": null,
   "icon": null,
   "env": null,
-  "requirements": ["tensorflow==1.7.0", "tensorflowjs==0.1.2", "keras==2.1.4", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest==3.5.0"],
+  "requirements": ["tensorflow", "tensorflowjs", "keras==2.2.1", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
   "dependencies": []
 }
 </config>
 
 <script lang="python">
 import sys
-sys.path.insert(0, '/Users/weiouyang/ImJoyWorkspace/default/anet-lite')
 import os
+sys.path.insert(0, '{}/anet-lite'.format(os.getcwd()))
+import asyncio
 import numpy as np
+from PIL import Image
 from anet.options import Options
 from anet.data.examples import GenericTransformedImages
 from anet.data.file_loader import ImageLoader
 
 from anet.networks import UnetGenerator, get_dssim_l1_loss
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, Callback
 from keras.models import load_model
 from anet.data.examples import TransformedTubulin001
-from anet.data.utils import make_generator
+from anet.data.utils import make_generator, make_test_generator
 from anet.utils import export_model_to_js
+from keras.models import load_model
 
 # import importlib
 # importlib.reload(UnetGenerator)
-
 import numpy as np
-class PythonPlugin():
+
+class UpdateUI(Callback):
+    def __init__(self, total_epoch):
+        self.total_epoch = total_epoch
+        self.epoch = 0
+        self.logs = {}
+
+    def on_batch_begin(self, batch, logs):
+        self.logs = logs
+        api.showStatus('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' ' + str(logs))
+        sys.stdout.flush()
+
+    def on_epoch_begin(self, epoch, logs):
+        self.epoch = epoch
+        self.logs = logs
+        api.showProgress(self.epoch/self.total_epoch*100)
+        api.showStatus('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' '+ str(logs))
+
+class ImJoyPlugin():
     def __init__(self):
-        opt = Options().parse(['--work_dir=/Users/weiouyang/ImJoyWorkspace/default/unet_data/train'])
-        self.opt = opt
-        # opt.work_dir = '/Users/weiouyang/ImJoyWorkspace/default/unet_data/train'
-        opt.input_channels = [('cell', {'filter':'cells*.png', 'loader':ImageLoader()})]
-        opt.output_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
+        self._initialized = False
+
+    def initialize(self, opt):
+        # opt.work_dir = '{}/unet_data/train'.format(os.getcwd())
         self.model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=16)
 
         if opt.load_from is not None:
+            print('loading weights from: ' + opt.load_from)
             self.model.load_weights(opt.load_from)
+        else:
+            model_path = os.path.join(opt.checkpoints_dir, '__model__.hdf5')
+            if os.path.exists(model_path):
+                print('loading weights from: ' + model_path)
+                self.model.load_weights(model_path)
 
         DSSIM_L1 = get_dssim_l1_loss()
         self.model.compile(optimizer='adam',
                     loss=DSSIM_L1,
                     metrics=['mse', DSSIM_L1])
-        
-    def setup(self):
-        print('setup in python')
+        self._initialized = True
+        api.showStatus("A-net lite successfully initialized.")
+
+    async def setup(self):
+        #api.register(name="set working directory", run=self.set_work_dir, ui="set working directory for loading data and saving trained models")
+        api.register(name="load trained weights", run=self.load_model_weights, ui="load a trained weights for the model")
+        api.register(name="train", run=self.train, ui="name:{id:'name', type:'string', placeholder:''}<br>"\
+                "epochs:{id:'epochs', type:'number', min:1, placeholder:100}<br>"\
+                "steps per epoch:{id:'steps', type:'number', min:1, placeholder:100}<br>"\
+                "batch size:{id:'batchsize', type:'number', min:1, placeholder:4}<br>"
+                )
+        api.register(name="test", run=self.test, ui="number of images:{id:'num', type:'number', min:1, placeholder:10}<br>")
+        lastPath = await api.getConfig('work_dir')
+        if lastPath is None:
+            work_dir = await api.showFileDialog(root=lastPath)
+            api.setConfig('work_dir', work_dir)
+            self._opt.work_dir = work_dir
+
+    async def load_model_weights(self, my):
+        if not self._initialized:
+            api.alert('Please click `Anet-Lite` before loading weights.')
+            return
+        lastPath = await api.getConfig('work_dir')
+        try:
+            weight_path = await api.showFileDialog(root=lastPath, type='file')
+            if os.path.exists(weight_path):
+                    print('loading weights from: ' + weight_path)
+                    self.model.load_weights(weight_path)
+                    api.showStatus('weights loaded from '+ weight_path)
+        except:
+            pass
 
     def export(self, my):
-        opt = self.opt
+        opt = self._opt
         export_model_to_js(self.model, opt.work_dir+'/__js_model__')
 
-    def run(self, my):
-        opt = self.opt
-        sources = GenericTransformedImages(opt)
+    async def run(self, my):
+        lastPath = await api.getConfig('work_dir')
+        work_dir = await api.showFileDialog(root=lastPath)
+        api.setConfig('work_dir', work_dir)
 
-        tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
-        checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir, 'weights.hdf5'), verbose=1, save_best_only=True)
+        config = my.config
+        print(config)
+        opt = Options().parse(['--work_dir={}/unet_data'.format(os.getcwd())])
+        opt.work_dir = work_dir
+        opt.input_nc = config.input_nc
+        opt.target_nc = config.target_nc
+        opt.input_size = config.input_size
+        opt.input_channels = []
+        for ch in config['input_ids'].split(','):
+            name, filter = ch.split('=')
+            opt.input_channels.append((name, {'filter':filter, 'loader':ImageLoader()}, ))
+
+        opt.target_channels = []
+        for ch in config['target_ids'].split(','):
+            name, filter = ch.split('=')
+            opt.target_channels.append((name, {'filter':filter, 'loader':ImageLoader()}, ))
+        print(opt.input_channels, opt.target_channels)
+
+        # opt.input_channels = [('cell', {'filter':'cells*.png', 'loader':ImageLoader()})]
+        # opt.target_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
+        self._opt = opt
+        self.initialize(opt)
+
+    async def test(self, my):
+        print(self._initialized)
+        if not self._initialized:
+            api.alert('Please click `Anet-Lite` before testing.')
+            return
+        sources = GenericTransformedImages(self._opt)
+        batch_size = 2
+        source = sources['test']
+        totalsize = len(source)
+        count = 0
+        output_dir = os.path.join(self._opt.work_dir, 'test_outputs')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        gen = make_test_generator(source, batch_size=batch_size)
+        api.showStatus('making predictions.')
+        for i in range(int(totalsize/batch_size+0.5)):
+            xbatch, paths = next(gen)
+            ypbatch = self.model.predict(xbatch, batch_size=batch_size)
+            count +=batch_size
+            for b in range(len(ypbatch)):
+                image = ypbatch[b]
+                path = paths[b]
+                for i in range(image.shape[2]):
+                    im = Image.fromarray(image[:, :, i].astype('float32'))
+                    im.save(path+'_output.tif')
+            api.showProgress(1.0*count/totalsize)
+            api.showStatus('making predictions: {}/{}'.format(count, totalsize))
+
+    async def train(self, my):
+        if not self._initialized:
+            api.alert('Please click `Anet-Lite` before training.')
+            return
+        opt = self._opt
+        sources = GenericTransformedImages(opt)
+        epochs =  my.config.epochs
+        updateUI = UpdateUI(epochs)
+        opt.batch_size = my.config.batchsize
+        tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, my.config.name + 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
+        checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir,  my.config.name + '__model__.hdf5'), verbose=1, save_best_only=True)
         self.model.fit_generator(make_generator(sources['train'], batch_size=opt.batch_size),
                             validation_data=make_generator(sources['valid'], batch_size=opt.batch_size),
-                            validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, callbacks=[checkpointer, tensorboard])
+                            validation_steps=4, steps_per_epoch=my.config.steps, epochs=epochs, verbose=2, callbacks=[updateUI, checkpointer, tensorboard])
+        self.model.save(os.path.join(opt.checkpoints_dir,  my.config.name + '__model__.hdf5'))
 
-
-api.export(PythonPlugin())
+api.export(ImJoyPlugin())
 </script>
