@@ -98,9 +98,12 @@ Once done, the result will be saved automatically into the testing folder.
   "outputs": null,
   "icon": null,
   "env": ["conda create -n anet python=3.6", "git clone https://github.com/oeway/Anet-Lite"],
-  "requirements": {"CPU":["tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
-                    "GPU": ["tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
+  "requirements": {"MAC-CPU":["tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                    "MAC-GPU": ["tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                    "Windows-CPU":["tensorflow==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                    "Windows-GPU": ["tensorflow-gpu==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
    },
+   "flags": ["single-instance", "allow-detach"],
   "dependencies": []
 }
 </config>
