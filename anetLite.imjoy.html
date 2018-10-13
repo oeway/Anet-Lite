@@ -261,7 +261,7 @@ class ImJoyPlugin():
         source = sources['test']
         totalsize = len(source)
         count = 0
-        output_dir = os.path.join(self._opt.work_dir, 'test_outputs')
+        output_dir = os.path.join(self._opt.work_dir, 'outputs')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         gen = make_test_generator(source, batch_size=batch_size)
