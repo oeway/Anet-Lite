@@ -53,7 +53,7 @@ The following parameter can be configured:
  where before `=` is the name we given for each channel, and we used `,` to seperate channels. Similary for the input channels, we can specify `Mask=channelB*.png`.
 
 Here we used a `*` here which means it can be replaced with any symbol, here there is no extra, it is designed for when there are multiple images belongs to the same channel.
- 
+
 ## Optionally, loading previously trained models
 
 ## start the training
@@ -266,6 +266,7 @@ class ImJoyPlugin():
             os.makedirs(output_dir)
         gen = make_test_generator(source, batch_size=batch_size)
         api.showStatus('making predictions.')
+        output_channels = [c[0] for c in self._opt.target_channels]
         for i in range(int(totalsize/batch_size+0.5)):
             xbatch, paths = next(gen)
             ypbatch = self.model.predict(xbatch, batch_size=batch_size)
@@ -273,9 +274,11 @@ class ImJoyPlugin():
             for b in range(len(ypbatch)):
                 image = ypbatch[b]
                 path = paths[b]
+                _, name = os.path.split(path)
+                output_path = os.path.join(output_dir, name)
                 for i in range(image.shape[2]):
                     im = Image.fromarray(image[:, :, i].astype('float32'))
-                    im.save(path+str(i)+'_output.tif')
+                    im.save(output_path+'_'+output_channels[i]+'_output.tif')
             api.showProgress(1.0*count/totalsize)
             api.showStatus('making predictions: {}/{}'.format(count, totalsize))
 
