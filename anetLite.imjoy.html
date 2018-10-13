@@ -14,20 +14,25 @@ Your data should be organized according to the following structure
     - sample1
       - channelA.png
       - channelB.png
+      - channelC.png
     - sample2
       - channelA.png
       - channelB.png
+      - channelC.png
     - ...
  - valid
     - sample20
       - channelA.png
       - channelB.png
+      - channelC.png
     - ...
  - test
     - sample43
       - channelA.png
+      - channelC.png
     - sample44
       - channelA.png
+      - channelC.png
 ```
 In the above folder structure, `train/valid/test` are three folders, `sample1`...`sample44` are sample folders, within the sample folder, it contains images with different channels.
 
@@ -36,12 +41,19 @@ You can also choose different channel names (e.g. `DAPI`, `C5`), but you need to
 
 These channel names will be used as an identifier for the plugin to recognize them, you will be asked to specify them when you `set working directory`.
 
-### Set working directory
+### Set working directory and parameters
 
 If you have the samples pepared the next step is to `set working directory` to the root folder of your samples.
 
 And you will be asked to specify the identifiers for your plugin.
 
+The following parameter can be configured:
+ * input identifiers and output identifiers: a string which specifies the naming pattern of each input and output channels, for example, the above folder structure contains `channelA.png`, `channelB.png` and `channelC.png`, 
+ if we want to use all the `channelA.png` and `channelC.png` as input channels, we can set `Cells=channelA*.png,DAPI=channelC*.png`, 
+ where before `=` is the name we given for each channel, and we used `,` to seperate channels. Similary for the input channels, we can specify `Mask=channelB*.png`.
+
+Here we used a `*` here which means it can be replaced with any symbol, here there is no extra, it is designed for when there are multiple images belongs to the same channel.
+ 
 ## Optionally, loading previously trained models
 
 ## start the training
@@ -77,10 +89,8 @@ Once done, the result will be saved automatically into the testing folder.
   "description": "A generic plugin for image-to-image translation with A-net.",
   "tags": ["CPU", "GPU"],
   "ui": ["Generic Image-to-Image Translation",
-        "input channel number: {id:'input_nc', type: 'number', min: 1, placeholder: 1}",
-        "input identifiers: {id:'input_ids', type: 'string', placeholder: 'cell=cells*.png'}",
-        "target channel number: {id:'target_nc', type: 'number', min: 1, placeholder: 1}",
-        "target identifiers: {id:'target_ids', type: 'string', placeholder: 'mask=mask_edge*.png'}",
+        "input identifiers: {id:'input_ids', type: 'string', placeholder: 'EM=EM*.png'}",
+        "target identifiers: {id:'target_ids', type: 'string', placeholder: 'Mask=Mask*.png'}",
         "base filter num: {id:'base_filter_num', type: 'number', min: 8, placeholder: 16}",
         "input size: {id:'input_size', type: 'number', min: 256, placeholder: 256}"
     ],
@@ -99,6 +109,9 @@ Once done, the result will be saved automatically into the testing folder.
 import sys
 import os
 os.chdir('./Anet-Lite')
+
+import requests
+import zipfile
 
 import asyncio
 import numpy as np
@@ -140,6 +153,27 @@ class ImJoyPlugin():
     def __init__(self):
         self._initialized = False
 
+    def download_data(self, my):
+        if not self._initialized:
+            api.alert('Please click `Anet-Lite` before downloading.')
+            return
+        work_dir = self._opt.work_dir
+        target_dir = os.path.join(work_dir, 'example_data')
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
+        url = 'https://www.dropbox.com/s/02w4he65f2cnf1t/EM_membrane_dataset.zip?dl=1'
+        api.showStatus('downloading...')
+        r = requests.get(url, allow_redirects=True)
+        name_zip = os.path.join(work_dir,'EM_membrane_dataset.zip')
+        open(name_zip, 'wb').write(r.content)
+        api.showStatus('unzipping...')
+        with zipfile.ZipFile(name_zip, 'r') as f:
+            f.extractall(target_dir)
+        os.remove(name_zip)
+        api.showStatus('example data saved to ' + os.path.abspath(target_dir))
+        self._opt.work_dir = target_dir
+
+
     def initialize(self, opt):
         # opt.work_dir = '{}/unet_data/train'.format(os.getcwd())
         self.model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=opt.base_filter)
@@ -162,6 +196,7 @@ class ImJoyPlugin():
 
     async def setup(self):
         #api.register(name="set working directory", run=self.set_work_dir, ui="set working directory for loading data and saving trained models")
+        api.register(name="get example dataset", run=self.download_data, ui="download example data set to your workspace")
         api.register(name="load trained weights", run=self.load_model_weights, ui="load a trained weights for the model")
         api.register(name="train", run=self.train, ui="name:{id:'name', type:'string', placeholder:''}<br>"\
                 "epochs:{id:'epochs', type:'number', min:1, placeholder:100}<br>"\
@@ -198,8 +233,6 @@ class ImJoyPlugin():
         print(config)
         opt = Options().parse(['--work_dir={}'.format(work_dir)])
         opt.work_dir = work_dir
-        opt.input_nc = config.input_nc
-        opt.target_nc = config.target_nc
         opt.input_size = config.input_size
         opt.base_filter = config.base_filter_num
         opt.input_channels = []
@@ -211,15 +244,15 @@ class ImJoyPlugin():
         for ch in config['target_ids'].split(','):
             name, filter = ch.split('=')
             opt.target_channels.append((name, {'filter':filter, 'loader':ImageLoader()}, ))
+        opt.input_nc = len(opt.input_channels)
+        opt.target_nc = len(opt.target_channels)
         print(opt.input_channels, opt.target_channels)
-
         # opt.input_channels = [('cell', {'filter':'cells*.png', 'loader':ImageLoader()})]
         # opt.target_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
         self._opt = opt
         self.initialize(opt)
 
     async def test(self, my):
-        print(self._initialized)
         if not self._initialized:
             api.alert('Please click `Anet-Lite` before testing.')
             return
