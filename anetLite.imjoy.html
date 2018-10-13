@@ -112,7 +112,8 @@ os.chdir('./Anet-Lite')
 
 import requests
 import zipfile
-
+import random
+import string
 import asyncio
 import numpy as np
 from PIL import Image
@@ -158,7 +159,7 @@ class ImJoyPlugin():
             api.alert('Please click `Anet-Lite` before downloading.')
             return
         work_dir = self._opt.work_dir
-        target_dir = os.path.join(work_dir, 'example_data')
+        target_dir = os.path.normpath(os.path.join(work_dir, '../example_data_' + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(4))))
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
         url = 'https://www.dropbox.com/s/02w4he65f2cnf1t/EM_membrane_dataset.zip?dl=1'
@@ -226,7 +227,7 @@ class ImJoyPlugin():
 
     async def run(self, my):
         lastPath = await api.getConfig('work_dir')
-        work_dir = await api.showFileDialog(root=lastPath)
+        work_dir = await api.showFileDialog(title="Please select a working directory (with data)", root=lastPath)
         api.setConfig('work_dir', work_dir)
 
         config = my.config
