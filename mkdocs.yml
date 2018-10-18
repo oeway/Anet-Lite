@@ -56,14 +56,13 @@ markdown_extensions:
 
 nav:
     - Overview: index.md   # Needed for material theme but not for others
-    - Anet plugin:
+    - Anet:
       - Overview: anet/anet-overview.md
-      - Unet: anet/anet-overview.md
-      - API: anet/anet-overview.md
+      - API: anet/anet-api.md
     - Cell segmentation:
-      - Overview: anet/anet-overview.md
+      - Overview: segment/segment-overview.md
     - Anna-PALM:
-          - Overview: anet/anet-overview.md
+          - Overview: annapalm/annapalm-overview.md
     - About:
       - Release Notes: about/release-notes.md
       - Licence: about/licence.md
