@@ -1,0 +1,73 @@
+# Project information
+site_name: Anet lite
+site_description: An ImJoy plugin providing Unet for deep learning
+site_author: Wei Ouyang
+site_url: https://github.com/oeway/Anet-Lite.git
+
+# Repository
+repo_name: GitHub
+repo_url: https://github.com/oeway/Anet-Lite.git
+edit_uri: ""
+
+# Copyright
+copyright: 'Copyright &copy; 2018 Wei Ouyang'
+
+# Configuration
+theme:
+  name: 'material'
+  #name: mkdocs
+  # 404 page
+  static_templates:
+    - 404.html
+
+  # Don't include MkDocs' JavaScript
+  include_search_page: false
+  search_index_only: true
+
+  # Default values, taken from mkdocs_theme.yml
+  language: en
+  feature:
+    tabs: true
+  palette:
+    primary: indigo
+    accent: indigo
+  font:
+    text: Roboto
+    code: Roboto Mono
+  favicon: /img/icons8-eukaryotic-cells-filled-100.png
+  logo:
+    icon: wb_sunny
+
+# Customization
+extra:
+  social:
+    - type: github-alt
+      link: https://github.com/oeway/
+
+# MD extension
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.tasklist
+  - pymdownx.superfences
+  - pymdownx.tilde
+
+nav:
+    - Overview: index.md   # Needed for material theme but not for others
+    - Anet plugin:
+      - Overview: anet/anet-overview.md
+      - Unet: anet/anet-overview.md
+      - API: anet/anet-overview.md
+    - Cell segmentation:
+      - Overview: anet/anet-overview.md
+    - Anna-PALM:
+          - Overview: anet/anet-overview.md
+    - About:
+      - Release Notes: about/release-notes.md
+      - Licence: about/licence.md
+
+
+#theme:
+#  name: 'material'
