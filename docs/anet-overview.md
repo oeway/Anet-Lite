@@ -23,7 +23,7 @@ folder `test1 xlogs` the events file for TensorBoard.
 .
 ```
 
-### Using Tensorboard
+## Using Tensorboard
 [TensorBoard](https://www.tensorflow.org/) provides a suite of visualization tools to make it easier to understand, debug, and optimize DeepLearning programs. To use
 Tensorboard, open a terminal and navigate to the folder containing the events
 file, e.g. `test1 xlogs` from the example above.

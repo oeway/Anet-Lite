@@ -7,6 +7,13 @@ Deep learning with Joy.
 
 
 ## mkdocs
-* Launch dev-server: `mkdocs serve`
 
+### requirements
+
+* mkdocs: `pip install mkdocs`
+* Material for mkdocs: `pip install mkdocs-material`
+* Markdown extension: `pip install pymdown-extensions`
+
+### Essential commands
+* Launch dev-server: `mkdocs serve`
 * Deploy to GitHub pages: `mkdocs gh-deploy --clean --force`

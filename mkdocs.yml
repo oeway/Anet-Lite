@@ -55,17 +55,20 @@ markdown_extensions:
   - pymdownx.tilde
 
 nav:
-    - Overview: index.md   # Needed for material theme but not for others
     - Anet:
-      - Overview: anet/anet-overview.md
-      - API: anet/anet-api.md
+      - Overview: index.md   # Needed for material theme but not for others
+      - Deep learning primer:  deeplearning.md   # Needed for material theme but not for others
+    - ANNA-PALM:
+      - Overview: annapalm-overview.md
     - Cell segmentation:
-      - Overview: segment/segment-overview.md
-    - Anna-PALM:
-          - Overview: annapalm/annapalm-overview.md
+      - Overview: segmentation-overview.md
+      - Annotation: segmentation-annotation.md
+    - Anet for developers:
+      - Overview: anet-overview.md
+      - API: anet-api.md
     - About:
-      - Release Notes: about/release-notes.md
-      - Licence: about/licence.md
+      - Release Notes: release-notes.md
+      - Licence: licence.md
 
 
 #theme:

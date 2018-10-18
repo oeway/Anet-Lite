@@ -1,0 +1,130 @@
+
+<docs lang="markdown">
+Plugin to import and convert annotated images. Annotations will be saved as a zip file which can be used by the ImJoy plugin Anet to perform cell segmentation with deep learning.
+</docs>
+
+<config lang="json">
+{
+  "name": "AnnotationImporter",
+  "mode": "pyworker",
+  "version": "0.1.0",
+  "api_version": "0.1.1",
+  "description": "Plugin to import and convert annotated images to be used by perform cell segmentation with Unet.",
+  "tags": ["CellMembrane","CellsNuclei"],
+  "ui": [],
+  "inputs": null,
+  "outputs": null,
+  "icon": null,
+  "env": null,
+  "requirements": ["scikit-image", "read-roi"],
+  "dependencies": []
+}
+</config>
+
+<script lang="python">
+
+# For development only    
+import sys
+sys.path.append('./imjoy-segmentation/src')
+import segmentationToolbox  
+import os
+import asyncio
+
+class PythonPlugin():
+
+    # Function to update ui dynamically
+    def update_ui(self):
+
+        if api.TAG == "CellMembrane":
+            api.register(name="AnnotationImporter",ui=[{
+                "Channel [Cells]": {"id":"cell_ident", "type":"string", "placeholder": self.cell_ident},
+                "Extension [Annotation]": {"id":"annot_ext", "type":"string", "placeholder":self.annot_ext},
+                "Extension [Image]": {"id":"img_ext", "type":"string", "placeholder": self.img_ext}  }] )
+
+        elif api.TAG == "CellsNuclei":
+            api.register(name="AnnotationImporter",ui=[{
+                "Channel [Cells]": {"id":"cell_ident", "type":"string", "placeholder": self.cell_ident},
+                "Channel [Nuclei]": {"id":"nuc_ident", "type":"string", "placeholder": self.nuc_ident},
+                "Extension [Annotation]": {"id":"annot_ext", "type":"string", "placeholder":self.annot_ext},
+                "Extension [Image]": {"id":"img_ext", "type":"string", "placeholder": self.img_ext}  }] )
+
+
+    # Function to initialize parameters (either default or from config)
+    async def setup(self):
+        
+        print(' == Initialize AnnotationImporter')
+
+        if api.TAG == "CellMembrane":
+            setting = await api.getConfig('annot_ext')
+            self.annot_ext = setting or "__RoiSet.zip"
+
+            setting = await api.getConfig('cell_ident')
+            self.cell_ident = setting or "C3-" 
+
+            setting = await api.getConfig('img_ext')
+            self.img_ext = setting or ".tif"
+
+        elif api.TAG == "CellsNuclei":
+            setting = await api.getConfig('annot_ext')
+            self.annot_ext = setting or "__RoiSet.zip"
+
+            setting = await api.getConfig('cell_ident')
+            self.cell_ident = setting or "C3-" 
+
+            setting = await api.getConfig('nuc_ident')
+            self.nuc_ident = setting or "C2-" 
+
+            setting = await api.getConfig('img_ext')
+            self.img_ext = setting or ".tif"
+
+        self.update_ui()
+  
+    def save_config(self,my):
+
+        if api.TAG == "CellMembrane":
+            api.setConfig('annot_ext', my.config.annot_ext)
+            api.setConfig('img_ext', my.config.img_ext)
+            api.setConfig('cell_ident', my.config.cell_ident)
+
+        elif api.TAG == "CellsNuclei":
+            api.setConfig('annot_ext', my.config.annot_ext)
+            api.setConfig('img_ext', my.config.img_ext)
+            api.setConfig('cell_ident', my.config.cell_ident)
+            api.setConfig('nuc_ident', my.config.nuc_ident)
+
+    def define_folder(self,my):
+        api.showFileDialog(uri_type="path",root="~").then(self.create_annotations).catch(print)
+
+    def create_annotations(self,path_open):
+
+        # All parameters to create annotations        
+        print(f" == Will process folder {path_open}")
+
+        # Generate parameters based on tag
+        if api.TAG == "CellMembrane":
+            channels    = {'cells':self.cell_ident}
+            masks_save  = {'cells':('mask_edge',)}
+        elif api.TAG == "CellsNuclei":
+            raise NotImplementedError(f'ERROR: Creating annotation for -{api.TAG}- not implemented yet.')
+
+        # Call function to create annotations
+        segmentationToolbox.process_folder_fiji(path_open,channels,self.img_ext,self.annot_ext,masks_save)
+
+    def run(self, my):
+
+        print(api.TAG)
+
+        print(" == Save configuration ")
+        self.save_config(my)
+
+        print(" == Create annotations ")
+        api.showStatus(" == Create annotations ")
+        # Check how plugin was called.
+        if my.data.data is None:
+            self.define_folder(my)
+        else:
+            api.getFilePath(my.data.data[0].href).then(self.create_annotations)
+        api.showStatus('== Annotation file created.')
+
+api.export(PythonPlugin())
+</script>
