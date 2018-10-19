@@ -7,3 +7,4 @@ What is deep learning. What do you need to know.
     - why different data-sets.
     - overfitting
     - how to judge training
+* GPU, CPU. what it is? why and when do we need it?

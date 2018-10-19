@@ -51,7 +51,7 @@ plugin to perform this task. This plugin has different **tags**, which render th
 The screenshot shown below shows the plugin interface for the segmentation of the
 cell membrane in the example data. Note that here we only have one channel.
 
-![Alt text](/img/seg-param-cellcortex.png)
+![PluginInterfaceCellCortex](/img/seg-param-cellcortex.png)
 
 For the example above, you have to specify
 
