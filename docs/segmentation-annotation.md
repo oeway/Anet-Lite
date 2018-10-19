@@ -25,16 +25,16 @@ few annotated images. For more details see our [**deep learning primer**](deeple
 │  ├─ C1-img31.tif
 │  ...
 ├─ train/
+│  ├─ C1-img4.tif
+│  ├─ C1-img4__RoiSet.zip
+│  ├─ C1-img5.tif
+│  ├─ C1-img5__RoiSet.zip
+│  ...
+├─ valid/
 │  ├─ C1-img1.tif
 │  ├─ C1-img1__RoiSet.zip
 │  ├─ C1-img2.tif
 │  ├─ C1-img2__RoiSet.zip
-│  ...
-├─ valid/
-│  ├─ C1-img3.tif
-│  ├─ C1-img3__RoiSet.zip
-│  ├─ C1-img4.tif
-│  ├─ C1-img4__RoiSet.zip
 .
 ```
 
@@ -90,14 +90,49 @@ For the example above, you have to specify
 3. File extension of the annotations (FIJI annotations with `_RoiSet.zip`)
 
 Once you specified these parameters you can convert an entire folder with annotations
-by pressing on the plugin itself (the blue text `AnnotationImporter`). Two possibilities exist
+by pressing on the plugin itself (the blue text `AnnotationImporter`). You will be
+asked to specify the parent folder containing the different data-sets.
 
-1. You don't select any window in the main interface of ImJoy. Then you will be asked to specify a folder.
-0. You specify first a folder that you would like to process. Press on the + symbol in the
-upper left corner, select `Load files through the python plugin engine`. This will create a window on your ImJoy workspace
-corresponding to the folder that you want to process. You can now select this window (the title bar wil turn blue), and press
-on the plugin name. The plugin will then process this folder.
-0. The plugin will open all annotation files, create the necessary mask images, and
+The plugin will open all annotation files, create the necessary mask images, and
 save them together with the corresponding images in a new folder `unet_data` in
-the processed folder. This directory can be used as an input directory for the training. It will also create a `.zip` file
+the processed folder. It contains two subfolders **train** and **valid**. Here,
+a dedicated folder with the name of the image is created. The actual images are
+then named with the channel identifier (e.g. `cells`) and the image masks with
+the channel identifier followed by the mask type (e.g. `cell_mask_edge.png`).
+
+```
+.
+├─ test/
+│  ...
+├─ train/
+│  ...
+├─ valid/
+│  ...
+├─ unet_data/
+│  ├─ train/
+│  │  ├─ C3-img4
+│  │  │  ├─ cells.png
+│  │  │  ├─ mask_edge.png
+│  │  ├─ C3-img5
+│  │  │  ├─ cells.png
+│  │  │  ├─ mask_edge.png
+│  │  ...
+│  ├─ valid/
+│  │  ├─ C3-img1
+│  │  │  ├─ cells.png
+│  │  │  ├─ mask_edge.png
+│  │  ├─ C3-img2
+│  │  │  ├─ cells.png
+│  │  │  ├─ mask_edge.png
+```
+
+
+This directory can be used as an input directory for the training. It will also create a `.zip` file
 that can be easily distributed.
+
+### Defining a root folder
+By default, ImJoy will open files in your home folder. If your data is at a different
+location, you can set a root folder. Each time you specify a file, ImJoy will open
+the file-dialog in this root folder. Press the button `Root folder` and specify the
+desired folder. The specified root folder is also saved, and will be resused the next time you launch
+ImJoy.
