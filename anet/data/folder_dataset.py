@@ -11,6 +11,7 @@ import os.path
 import fnmatch
 import numpy as np
 from collections import OrderedDict
+import random
 
 def make_dataset(rootdir, channels, recursive=True, allow_unpaired=False):
     images = []
