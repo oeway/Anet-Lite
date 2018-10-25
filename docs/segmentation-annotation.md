@@ -1,4 +1,4 @@
-# Image Annotation
+# Image annotation
 
 In this step, the structures of interest, e.g. cell and nuclei, are outline in
 the images to generate data that will be used to train the neural network.
@@ -79,7 +79,7 @@ plugin to perform this task. This plugin has different **tags**, which render th
  for a given segmentation tasks. You only have to specify a few key properties of your data.
 
 The screenshot shown below shows the plugin interface for the segmentation of the
-cell membrane in the example data. Note that here we only have one channel.
+cell membrane in the example data. Note that here is only one channel.
 
 ![PluginInterfaceCellCortex](/img/segment-param-cellcortex.png)
 
@@ -108,7 +108,7 @@ the channel identifier followed by the mask type (e.g. `cell_mask_edge.png`).
 │  ...
 ├─ valid/
 │  ...
-├─ unet_data/
+├─ _unet_data/
 │  ├─ train/
 │  │  ├─ C3-img4
 │  │  │  ├─ cells.png
@@ -126,9 +126,9 @@ the channel identifier followed by the mask type (e.g. `cell_mask_edge.png`).
 │  │  │  ├─ mask_edge.png
 ```
 
+This directory can be used as an input directory for the training.
 
-This directory can be used as an input directory for the training. It will also create a `.zip` file
-that can be easily distributed.
+**NEEDED?** It will also create a `.zip` file that can be easily distributed.
 
 ### Defining a root folder
 By default, ImJoy will open files in your home folder. If your data is at a different

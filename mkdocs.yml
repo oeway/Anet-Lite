@@ -62,7 +62,10 @@ nav:
       - Overview: annapalm-overview.md
     - Cell segmentation:
       - Overview: segmentation-overview.md
+      - Workflows: segmentation-workflows.md
+      - Projection: segmentation-projection.md
       - Annotations: segmentation-annotation.md
+      - Segmentation: segmentation-cellsegmentation.md
     - Anet for developers:
       - Overview: anet-overview.md
       - API: anet-api.md
