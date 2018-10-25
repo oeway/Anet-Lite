@@ -75,8 +75,12 @@ another training instance with this model (aka warm start).
 
 
 ### Generated data during training
-During training, the Anet ImJoy plugin stores the model (`.hdf5` files) together with necessary events to call Tensorflow in a folder `__model__` within the data folder **TODO - currently in the workspace**. Each training has a dedicated user-defined name,
-allowing to store results of different trainings.
+The Anet plugin will store data generated during training in a subfolder
+ `anet_data/__model__` within the working directory.
+* The actual model  is stored as `hdf5` file with the specified name of the
+training followed by the suffix `__model__`.
+* For each training a dedicated subfolder is created with the name of the training
+ followed by `_logs`
 
 The example below shows the `__model__` folder containg the results of two trainings
 (`test1`, `test2`). The file `test1 x_model__.hdf5` containes the model, the
@@ -88,26 +92,40 @@ folder `test1 xlogs` the events file for TensorBoard.
 ├─ test1 x_model__.hdf5
 ├─ test2 x_model__.hdf5
 │
-├─ test1 xlogs/
+├─ test1_xlogs/
 │  ├─ events.out.tfevents.1539359258.HOSTURL
 │
-├─ test2 xlogs/
+├─ test2_xlogs/
 │  ├─ events.out.tfevents.1539359260.HOSTURL
 .
 ```
 ### Advanced: using Tensorboard
-[TensorBoard](https://www.tensorflow.org/) provides a suite of visualization tools to make it easier to understand, debug, and optimize DeepLearning programs. To use
-Tensorboard, open a terminal and navigate to the folder containing the events
+[TensorBoard](https://www.tensorflow.org/) provides a suite of visualization tools
+to make it easier to understand, debug, and optimize Deep Learning programs.
+
+To use Tensorboard, open a terminal and navigate to the folder containing the events
 file, e.g. `test1 xlogs` from the example above.
 
 Then call TensorBoard with the following command.
 ```
 python -m tensorboard.main --logdir=.
+```
+You will obtain the local host `LOCALHOST` address to open Tensorboard,
+open a browser and paste the entire address, e.g.
+`LOCALHOST:6006` in the example below.
+
+```
 TensorBoard 1.5.1 at LOCALHOST:6006 (Press CTRL+C to quit)
 ```
-You will obtain the local host `LOCALHOST` address to open Tensorboard, open a browser and paste the entire address.
 
-If you receive an error message such as `This site can’t be reached`, replace the local host address by `127.0.01`, e.g. for the example above: `http://127.0.0.1:6006`.
+If you receive an error message such as `This site can’t be reached`, replace
+the local host address by `127.0.01`, e.g. for the example above: `http://127.0.0.1:6006`.
+
+You will then see an additional tab in your browser with Tensorflow.Here you can
+inspect training progress (tab `GRAPHS`) and also inspect the used network
+architecture (tab `GRAPHS`).
+
+![ImJoyScreenshot](/img/anet-tensorflow.png)
 
 ## Optionally: load trained models
 

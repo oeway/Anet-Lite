@@ -102,13 +102,7 @@ the channel identifier followed by the mask type (e.g. `cell_mask_edge.png`).
 
 ```
 .
-├─ test/
-│  ...
-├─ train/
-│  ...
-├─ valid/
-│  ...
-├─ _unet_data/
+├─ anet/
 │  ├─ train/
 │  │  ├─ C3-img4
 │  │  │  ├─ cells.png
@@ -124,6 +118,14 @@ the channel identifier followed by the mask type (e.g. `cell_mask_edge.png`).
 │  │  ├─ C3-img2
 │  │  │  ├─ cells.png
 │  │  │  ├─ mask_edge.png
+│  │   ...
+├─ test/
+│  ...
+├─ train/
+│  ...
+├─ valid/
+│  ...
+
 ```
 
 This directory can be used as an input directory for the training.

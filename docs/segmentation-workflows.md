@@ -16,7 +16,7 @@ The folder structure for the segmentation of the cell membrane looks like This
 
 ```
 .
-├─ u_net_data/                        # Folder for Anet plugin
+├─ anet/                        # Folder for Anet plugin
 │  ├─ train
 │  │  ├─ img1/
 │  │  │  ├─ cells.png
