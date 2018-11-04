@@ -1,6 +1,6 @@
 import sys
 
-requirements = ['tensorflow>=1.7.0', 'tensorflowjs>=0.1.2', 'keras>=2.1.4', 'keras_contrib', 'pytest==3.5.0']
+requirements = ['tensorflow==1.11.0', 'tensorflowjs==0.6.5', 'keras==2.2.4', 'git+https://www.github.com/keras-team/keras-contrib.git', 'pytest==3.5.0']
 
 from setuptools import setup, find_packages
 setup(name='anet-lite',
