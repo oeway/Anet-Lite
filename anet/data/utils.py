@@ -2,6 +2,7 @@ import os
 import numpy as np
 import hashlib
 import json
+from PIL import Image
 
 EPS = 0.0001
 
@@ -79,3 +80,14 @@ def calculate_mean_std(data_source, count=1000, label='A'):
         trr = torch.stack(xList)
         trr = trr.transpose(1, 3).contiguous()
         return trr.view(-1, trr.size(3)).mean(dim=0), trr.view(-1, trr.size(3)).std(dim=0)
+
+
+def save_images(batch, paths, output_dir, label=''):
+    for b in range(len(batch)):
+        image = batch[b]
+        path = paths[b]
+        _, name = os.path.split(path)
+        output_path = os.path.join(output_dir, name)
+        for i in range(image.shape[2]):
+            im = Image.fromarray(image[:, :, i].astype('float32'))
+            im.save(output_path+'_'+label+'_c'+str(i)+'.tif')

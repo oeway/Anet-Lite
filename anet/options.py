@@ -9,6 +9,7 @@ class Options():
 
     def initialize(self):
         self.parser.add_argument('--work_dir', type=str, required=True, help='work directory')
+        self.parser.add_argument('--phase', type=str, default='train', help='training or testing')
         self.parser.add_argument('--load_from', type=str, default=None, help='load weights from path')
         self.parser.add_argument('--save_dir', type=str, default=None, help='path for save outputs and configs')
         self.parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')

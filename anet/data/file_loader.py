@@ -20,6 +20,12 @@ class ImageLoader(FileLoader):
     def cache(self, path):
         return True
     def __call__(self, path):
+        if self.mode == 'F':
+            image = Image.open(path).convert(self.mode)
+            image = np.array(image)
+            if image.ndim == 3:
+                image = image[:, :, 0]
+                return Image.fromarray(image)
         return Image.open(path).convert(self.mode)
 
 
