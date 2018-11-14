@@ -376,7 +376,7 @@ class GenericTransformedImages():
         self.iSplit = Split([0, len(self.input_channels)], [len(self.input_channels), len(self.input_channels)+len(self.target_channels)])
 
         self.iRCropTrain1 = RandomCropNumpy(size=(train_crop_size1, train_crop_size1))
-        self.iRot = RandomRotate(angle_range=(0.0, 30.0))
+        self.iRot = RandomRotate()
         self.iCropTrain2 = CenterCropNumpy(size=(train_crop_size2, train_crop_size2))
 
         self.iCropTest = CenterCropNumpy(size=(test_size, test_size))
