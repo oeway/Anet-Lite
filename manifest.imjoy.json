@@ -2,12 +2,12 @@
  "name": "ImJoy Repository",
  "description": "This is a repository for A-net Lite",
  "version": "0.2.0",
- "uri_root": "https://raw.githubusercontent.com/oeway/Anet-Lite/master/repository",
+ "uri_root": "",
  "plugins": [
    {
      "name": "Anet-Lite",
-     "mode": "pyworker",
-     "version": "0.1.0",
+     "type": "native-python",
+     "version": "0.1.2",
      "api_version": "0.1.1",
      "description": "A generic plugin for image-to-image translation with A-net.",
      "tags": ["CPU", "GPU"],
