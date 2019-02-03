@@ -48,8 +48,8 @@ If you have the samples pepared the next step is to `set working directory` to t
 And you will be asked to specify the identifiers for your plugin.
 
 The following parameter can be configured:
- * input identifiers and output identifiers: a string which specifies the naming pattern of each input and output channels, for example, the above folder structure contains `channelA.png`, `channelB.png` and `channelC.png`, 
- if we want to use all the `channelA.png` and `channelC.png` as input channels, we can set `Cells=channelA*.png,DAPI=channelC*.png`, 
+ * input identifiers and output identifiers: a string which specifies the naming pattern of each input and output channels, for example, the above folder structure contains `channelA.png`, `channelB.png` and `channelC.png`,
+ if we want to use all the `channelA.png` and `channelC.png` as input channels, we can set `Cells=channelA*.png,DAPI=channelC*.png`,
  where before `=` is the name we given for each channel, and we used `,` to seperate channels. Similary for the input channels, we can specify `Mask=channelB*.png`.
 
 Here we used a `*` here which means it can be replaced with any symbol, here there is no extra, it is designed for when there are multiple images belongs to the same channel.
@@ -84,7 +84,7 @@ Once done, the result will be saved automatically into the testing folder.
 {
   "name": "Anet-Lite",
   "mode": "pyworker",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "api_version": "0.1.1",
   "description": "A generic plugin for image-to-image translation with A-net.",
   "tags": ["CPU", "GPU", "Windows-CPU", "Window-GPU"],
@@ -97,14 +97,14 @@ Once done, the result will be saved automatically into the testing folder.
   "inputs": null,
   "outputs": null,
   "icon": null,
-  "env": ["conda create -n anet python=3.6", "git clone https://github.com/oeway/Anet-Lite"],
-  "requirements": {"CPU":["tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
-                    "GPU": ["tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
-                    "Windows-CPU":["tensorflow==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
-                    "Windows-GPU": ["tensorflow-gpu==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
+  "env": ["conda create -n anet python=3.6"],
+  "requirements": {"CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                    "GPU": ["repo: https://github.com/oeway/Anet-Lite", "tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                    "Windows-CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                    "Windows-GPU": ["repo: https://github.com/oeway/Anet-Lite", "tensorflow-gpu==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
    },
    "flags": ["single-instance", "allow-detach"],
-  "dependencies": []
+  "dependencies": ["oeway/ImJoy-Plugins:Im2Im-Dashboard"]
 }
 </config>
 
@@ -134,24 +134,56 @@ from keras.models import load_model
 
 # import importlib
 # importlib.reload(UnetGenerator)
-import numpy as np
+
+import base64
+from io import BytesIO
+from PIL import Image
+
+def plot_tensors(dash, tensor_list, label, titles):
+    image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2]) for tensor in tensor_list]
+    displays = {}
+    titles = titles or [ 'Tensor '+str(i) for i in range(len(image_list))]
+    for i in range(len(image_list)):
+        im = image_list[i]
+        min = im.min()
+        im = Image.fromarray(((im-min)/(im.max()-min)*255).astype('uint8'))
+        buffered = BytesIO()
+        im.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue()).decode('ascii')
+        imgurl = 'data:image/png;base64,' + img_str
+        displays[titles[i]] = imgurl
+    dash.appendDisplay(label, displays)
+
 
 class UpdateUI(Callback):
-    def __init__(self, total_epoch):
+    def __init__(self, total_epoch, dash, gen):
         self.total_epoch = total_epoch
         self.epoch = 0
         self.logs = {}
+        self.dash = dash
+        self.step = 0
+        self.gen = gen
 
-    def on_batch_begin(self, batch, logs):
+    def on_batch_end(self, batch, logs):
         self.logs = logs
         api.showStatus('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' ' + str(logs))
         sys.stdout.flush()
+        self.dash.updateCallback('onStep', self.step, {'mse': np.asscalar(logs['mean_squared_error']), 'dssim_l1': np.asscalar(logs['DSSIM_L1'])})
+        self.step += 1
 
-    def on_epoch_begin(self, epoch, logs):
+    def on_epoch_end(self, epoch, logs):
         self.epoch = epoch
         self.logs = logs
         api.showProgress(self.epoch/self.total_epoch*100)
         api.showStatus('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' '+ str(logs))
+
+        xbatch, ybatch = next(self.gen)
+        ypbatch = self.model.predict(xbatch, batch_size=1)
+        tensor_list = [ypbatch, xbatch, ybatch]
+        label = 'Step '+ str(self.step)
+        titles = ["output", 'input', 'target']
+        plot_tensors(self.dash, tensor_list, label, titles)
+
 
 class ImJoyPlugin():
     def __init__(self):
@@ -204,11 +236,11 @@ class ImJoyPlugin():
         api.register(name="load trained weights", run=self.load_model_weights, ui="load a trained weights for the model")
         api.register(name="train", run=self.train, ui="name:{id:'name', type:'string', placeholder:''}<br>"\
                 "epochs:{id:'epochs', type:'number', min:1, placeholder:100}<br>"\
-                "steps per epoch:{id:'steps', type:'number', min:1, placeholder:100}<br>"\
+                "steps per epoch:{id:'steps', type:'number', min:1, placeholder:10}<br>"\
                 "batch size:{id:'batchsize', type:'number', min:1, placeholder:4}<br>"
                 )
         api.register(name="test", run=self.test, ui="number of images:{id:'num', type:'number', min:1, placeholder:10}<br>")
-        
+
 
     async def load_model_weights(self, my):
         if not self._initialized:
@@ -261,9 +293,9 @@ class ImJoyPlugin():
             api.alert('Please click `Anet-Lite` before testing.')
             return
         sources = GenericTransformedImages(self._opt)
-        batch_size = 2
+        batch_size = 1
         source = sources['test']
-        totalsize = len(source)
+
         count = 0
         output_dir = os.path.join(self._opt.work_dir, 'outputs')
         if not os.path.exists(output_dir):
@@ -271,9 +303,16 @@ class ImJoyPlugin():
         gen = make_test_generator(source, batch_size=batch_size)
         api.showStatus('making predictions.')
         output_channels = [c[0] for c in self._opt.target_channels]
+        totalsize = len(source)
+
+        self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Prediction", w=25, h=10, data={})
         for i in range(int(totalsize/batch_size+0.5)):
             xbatch, paths = next(gen)
             ypbatch = self.model.predict(xbatch, batch_size=batch_size)
+            tensor_list = [ypbatch, xbatch]
+            label = 'Sample '+ str(i)
+            titles = ["output", 'input']
+            plot_tensors(self.dash, tensor_list, label, titles)
             count +=batch_size
             for b in range(len(ypbatch)):
                 image = ypbatch[b]
@@ -293,7 +332,8 @@ class ImJoyPlugin():
         opt = self._opt
         sources = GenericTransformedImages(opt)
         epochs =  my.config.epochs
-        updateUI = UpdateUI(epochs)
+        self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Training", w=25, h=10, data={'metrics': ['mse', 'dssim_l1'], 'callbacks': ['onStep']})
+        updateUI = UpdateUI(epochs, self.dash, make_generator(sources['valid'], batch_size=1))
         opt.batch_size = my.config.batchsize
         tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, my.config.name + 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
         checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir,  my.config.name + '__model__.hdf5'), verbose=1, save_best_only=True)
