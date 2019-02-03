@@ -103,7 +103,7 @@ Once done, the result will be saved automatically into the testing folder.
                     "Windows-CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
                     "Windows-GPU": ["repo: https://github.com/oeway/Anet-Lite", "tensorflow-gpu==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
    },
-   "flags": ["single-instance", "allow-detach"],
+   "flags": [],
   "dependencies": ["oeway/ImJoy-Plugins:Im2Im-Dashboard"]
 }
 </config>
@@ -305,7 +305,7 @@ class ImJoyPlugin():
         output_channels = [c[0] for c in self._opt.target_channels]
         totalsize = len(source)
 
-        self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Prediction", w=25, h=10, data={})
+        self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Prediction", w=25, h=10, data={"display_mode": "all"})
         for i in range(int(totalsize/batch_size+0.5)):
             xbatch, paths = next(gen)
             ypbatch = self.model.predict(xbatch, batch_size=batch_size)
@@ -332,7 +332,7 @@ class ImJoyPlugin():
         opt = self._opt
         sources = GenericTransformedImages(opt)
         epochs =  my.config.epochs
-        self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Training", w=25, h=10, data={'metrics': ['mse', 'dssim_l1'], 'callbacks': ['onStep']})
+        self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Training", w=25, h=10, data={"display_mode": "all", 'metrics': ['mse', 'dssim_l1'], 'callbacks': ['onStep']})
         updateUI = UpdateUI(epochs, self.dash, make_generator(sources['valid'], batch_size=1))
         opt.batch_size = my.config.batchsize
         tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, my.config.name + 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
