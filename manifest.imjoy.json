@@ -1,32 +1,33 @@
 {
- "name": "ImJoy Repository",
+ "name": "Anet-Lite",
  "description": "This is a repository for A-net Lite",
  "version": "0.2.0",
  "uri_root": "",
  "plugins": [
-   {
+     {
      "name": "Anet-Lite",
      "type": "native-python",
      "version": "0.1.2",
      "api_version": "0.1.1",
      "description": "A generic plugin for image-to-image translation with A-net.",
-     "tags": ["CPU", "GPU"],
+     "tags": ["CPU", "GPU", "Windows-CPU", "Window-GPU"],
      "ui": ["Generic Image-to-Image Translation",
-           "input channel number: {id:'input_nc', type: 'number', min: 1, placeholder: 1}",
-           "input identifiers: {id:'input_ids', type: 'string', placeholder: 'cell=cells*.png'}",
-           "target channel number: {id:'target_nc', type: 'number', min: 1, placeholder: 1}",
-           "target identifiers: {id:'target_ids', type: 'string', placeholder: 'mask=mask_edge*.png'}",
+           "input identifiers: {id:'input_ids', type: 'string', placeholder: 'EM=EM*.png'}",
+           "target identifiers: {id:'target_ids', type: 'string', placeholder: 'Mask=Mask*.png'}",
            "base filter num: {id:'base_filter_num', type: 'number', min: 8, placeholder: 16}",
            "input size: {id:'input_size', type: 'number', min: 256, placeholder: 256}"
        ],
      "inputs": null,
      "outputs": null,
      "icon": null,
-     "env": ["conda create -n anet python=3.6", "git clone https://github.com/oeway/Anet-Lite"],
-     "requirements": {"CPU":["tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
-                       "GPU": ["tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
+     "env": ["conda create -n anet python=3.6"],
+     "requirements": {"CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                       "GPU": ["repo: https://github.com/oeway/Anet-Lite", "tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                       "Windows-CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
+                       "Windows-GPU": ["repo: https://github.com/oeway/Anet-Lite", "tensorflow-gpu==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"]
       },
-     "dependencies": [],
+      "flags": [],
+     "dependencies": ["oeway/ImJoy-Plugins:Im2Im-Dashboard"],
      "uri": "anetLite.imjoy.html"
    }
  ]
