@@ -1,4 +1,3 @@
-
 <docs lang="markdown">
 # Anet-lite
 
@@ -97,7 +96,12 @@ Once done, the result will be saved automatically into the testing folder.
   "inputs": null,
   "outputs": null,
   "icon": null,
-  "env": ["conda create -n anet-lite python=3.6"],
+  "env": {
+    "CPU":["conda create -n anet-cpu python=3.6"],
+    "GPU": ["conda create -n anet-gpu python=3.6"],
+    "Windows-CPU": ["conda create -n anet-win-cpu python=3.6"],
+    "Windows-GPU": ["conda create -n anet-win-gpu python=3.6"]
+  },
   "requirements": {"CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
                     "GPU": ["repo: https://github.com/oeway/Anet-Lite", "tensorflow-gpu==1.5", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
                     "Windows-CPU":["repo: https://github.com/oeway/Anet-Lite", "tensorflow==1.2", "keras==2.2.1", "Pillow", "git+https://www.github.com/keras-team/keras-contrib.git", "pytest"],
@@ -112,7 +116,6 @@ Once done, the result will be saved automatically into the testing folder.
 import sys
 import os
 os.chdir('./Anet-Lite')
-
 import requests
 import zipfile
 import random
@@ -123,7 +126,6 @@ from PIL import Image
 from anet.options import Options
 from anet.data.examples import GenericTransformedImages
 from anet.data.file_loader import ImageLoader
-
 from anet.networks import UnetGenerator, get_dssim_l1_loss
 from keras.callbacks import ModelCheckpoint, TensorBoard, Callback
 from keras.models import load_model
@@ -131,14 +133,11 @@ from anet.data.examples import TransformedTubulin001
 from anet.data.utils import make_generator, make_test_generator
 from anet.utils import export_model_to_js
 from keras.models import load_model
-
 # import importlib
 # importlib.reload(UnetGenerator)
-
 import base64
 from io import BytesIO
 from PIL import Image
-
 def plot_tensors(dash, tensor_list, label, titles):
     image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2]) for tensor in tensor_list]
     displays = {}
@@ -153,8 +152,6 @@ def plot_tensors(dash, tensor_list, label, titles):
         imgurl = 'data:image/png;base64,' + img_str
         displays[titles[i]] = imgurl
     dash.appendDisplay(label, displays)
-
-
 class UpdateUI(Callback):
     def __init__(self, total_epoch, dash, gen):
         self.total_epoch = total_epoch
@@ -163,32 +160,26 @@ class UpdateUI(Callback):
         self.dash = dash
         self.step = 0
         self.gen = gen
-
     def on_batch_end(self, batch, logs):
         self.logs = logs
         api.showStatus('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' ' + str(logs))
         sys.stdout.flush()
         self.dash.updateCallback('onStep', self.step, {'mse': np.asscalar(logs['mean_squared_error']), 'dssim_l1': np.asscalar(logs['DSSIM_L1'])})
         self.step += 1
-
     def on_epoch_end(self, epoch, logs):
         self.epoch = epoch
         self.logs = logs
         api.showProgress(self.epoch/self.total_epoch*100)
         api.showStatus('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' '+ str(logs))
-
         xbatch, ybatch = next(self.gen)
         ypbatch = self.model.predict(xbatch, batch_size=1)
         tensor_list = [ypbatch, xbatch, ybatch]
         label = 'Step '+ str(self.step)
         titles = ["output", 'input', 'target']
         plot_tensors(self.dash, tensor_list, label, titles)
-
-
 class ImJoyPlugin():
     def __init__(self):
         self._initialized = False
-
     def download_data(self, my):
         if not self._initialized:
             api.alert('Please click `Anet-Lite` before downloading.')
@@ -208,12 +199,9 @@ class ImJoyPlugin():
         os.remove(name_zip)
         api.showStatus('example data saved to ' + os.path.abspath(target_dir))
         self._opt.work_dir = target_dir
-
-
     def initialize(self, opt):
         # opt.work_dir = '{}/unet_data/train'.format(os.getcwd())
         self.model = UnetGenerator(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc, base_filter=opt.base_filter)
-
         if opt.load_from is not None:
             print('loading weights from: ' + opt.load_from)
             self.model.load_weights(opt.load_from)
@@ -222,14 +210,12 @@ class ImJoyPlugin():
             if os.path.exists(model_path):
                 print('loading weights from: ' + model_path)
                 self.model.load_weights(model_path)
-
         DSSIM_L1 = get_dssim_l1_loss()
         self.model.compile(optimizer='adam',
                     loss=DSSIM_L1,
                     metrics=['mse', DSSIM_L1])
         self._initialized = True
         api.showStatus("A-net lite successfully initialized.")
-
     async def setup(self):
         #api.register(name="set working directory", run=self.set_work_dir, ui="set working directory for loading data and saving trained models")
         api.register(name="get example dataset", run=self.download_data, ui="download example data set to your workspace")
@@ -240,8 +226,6 @@ class ImJoyPlugin():
                 "batch size:{id:'batchsize', type:'number', min:1, placeholder:4}<br>"
                 )
         api.register(name="test", run=self.test, ui="number of images:{id:'num', type:'number', min:1, placeholder:10}<br>")
-
-
     async def load_model_weights(self, my):
         if not self._initialized:
             api.alert('Please click `Anet-Lite` before loading weights.')
@@ -255,16 +239,12 @@ class ImJoyPlugin():
                 api.showStatus('weights loaded from '+ weight_path)
         except:
             pass
-
     def export(self, my):
         opt = self._opt
         export_model_to_js(self.model, opt.work_dir+'/__js_model__')
-
     async def run(self, my):
-        lastPath = await api.getConfig('work_dir')
-        work_dir = await api.showFileDialog(title="Please select a working directory (with data)", root=lastPath)
+        work_dir = await api.showFileDialog(title="Please select a working directory (with data)")
         api.setConfig('work_dir', work_dir)
-
         config = my.config
         print(config)
         opt = Options().parse(['--work_dir={}'.format(work_dir)])
@@ -275,7 +255,6 @@ class ImJoyPlugin():
         for ch in config['input_ids'].split(','):
             name, filter = ch.split('=')
             opt.input_channels.append((name, {'filter':filter, 'loader':ImageLoader()}, ))
-
         opt.target_channels = []
         for ch in config['target_ids'].split(','):
             name, filter = ch.split('=')
@@ -287,7 +266,6 @@ class ImJoyPlugin():
         # opt.target_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
         self._opt = opt
         self.initialize(opt)
-
     async def test(self, my):
         if not self._initialized:
             api.alert('Please click `Anet-Lite` before testing.')
@@ -295,7 +273,6 @@ class ImJoyPlugin():
         sources = GenericTransformedImages(self._opt)
         batch_size = 1
         source = sources['test']
-
         count = 0
         output_dir = os.path.join(self._opt.work_dir, 'outputs')
         if not os.path.exists(output_dir):
@@ -304,7 +281,6 @@ class ImJoyPlugin():
         api.showStatus('making predictions.')
         output_channels = [c[0] for c in self._opt.target_channels]
         totalsize = len(source)
-
         self.dash = await api.createWindow(type="Im2Im-Dashboard", name="Anet-lite Prediction", w=25, h=10, data={"display_mode": "all"})
         for i in range(int(totalsize/batch_size+0.5)):
             xbatch, paths = next(gen)
@@ -324,7 +300,6 @@ class ImJoyPlugin():
                     im.save(output_path+'_'+output_channels[i]+'_output.tif')
             api.showProgress(1.0*count/totalsize)
             api.showStatus('making predictions: {}/{}'.format(count, totalsize))
-
     async def train(self, my):
         if not self._initialized:
             api.alert('Please click `Anet-Lite` before training.')
@@ -341,6 +316,5 @@ class ImJoyPlugin():
                             validation_data=make_generator(sources['valid'], batch_size=opt.batch_size),
                             validation_steps=4, steps_per_epoch=my.config.steps, epochs=epochs, verbose=2, callbacks=[updateUI, checkpointer, tensorboard])
         self.model.save(os.path.join(opt.checkpoints_dir,  my.config.name + '__model__.hdf5'))
-
 api.export(ImJoyPlugin())
 </script>
