@@ -1,19 +1,11 @@
 # Anet lite
-Deep learning with Joy.
-
----
-
-- Detailed description can be found in the [Anet lite documentation](ToBeAdded).
+Image-to-image translation framework
 
 
-## mkdocs
+## Try Anet-Lite with ImJoy.io
 
-### requirements
+1. Download and Install the [ImJoy App](https://github.com/oeway/ImJoy-App/releases);
+2. [Install](https://imjoy.io/#/app?w=anet-lite&plugin=oeway/Anet-Lite:Anet-Lite) the ANNA-PALM plugin;
+3. Use it from the ImJoy plugin menu.
 
-* mkdocs: `pip install mkdocs`
-* Material for mkdocs: `pip install mkdocs-material`
-* Markdown extension: `pip install pymdown-extensions`
 
-### Essential commands
-* Launch dev-server: `mkdocs serve`
-* Deploy to GitHub pages: `mkdocs gh-deploy --clean --force`
