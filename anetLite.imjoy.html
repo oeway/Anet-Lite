@@ -82,7 +82,7 @@ Once done, the result will be saved automatically into the testing folder.
 <config lang="json">
 {
   "name": "Anet-Lite",
-  "mode": "pyworker",
+  "type": "native-python",
   "version": "0.1.2",
   "api_version": "0.1.1",
   "description": "A generic plugin for image-to-image translation with A-net.",
@@ -115,7 +115,7 @@ Once done, the result will be saved automatically into the testing folder.
 <script lang="python">
 import sys
 import os
-os.chdir('./Anet-Lite')
+os.chdir('Anet-Lite')
 import requests
 import zipfile
 import random
@@ -138,6 +138,7 @@ from keras.models import load_model
 import base64
 from io import BytesIO
 from PIL import Image
+
 def plot_tensors(dash, tensor_list, label, titles):
     image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2]) for tensor in tensor_list]
     displays = {}
@@ -177,6 +178,8 @@ class UpdateUI(Callback):
         label = 'Step '+ str(self.step)
         titles = ["output", 'input', 'target']
         plot_tensors(self.dash, tensor_list, label, titles)
+
+
 class ImJoyPlugin():
     def __init__(self):
         self._initialized = False
@@ -316,5 +319,6 @@ class ImJoyPlugin():
                             validation_data=make_generator(sources['valid'], batch_size=opt.batch_size),
                             validation_steps=4, steps_per_epoch=my.config.steps, epochs=epochs, verbose=2, callbacks=[updateUI, checkpointer, tensorboard])
         self.model.save(os.path.join(opt.checkpoints_dir,  my.config.name + '__model__.hdf5'))
+
 api.export(ImJoyPlugin())
 </script>
