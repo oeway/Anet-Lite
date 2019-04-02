@@ -83,7 +83,7 @@ Once done, the result will be saved automatically into the testing folder.
 {
   "name": "Anet-Lite",
   "type": "native-python",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "api_version": "0.1.1",
   "description": "A generic plugin for image-to-image translation with A-net.",
   "tags": ["CPU", "GPU", "Windows-CPU", "Window-GPU"],
@@ -139,6 +139,13 @@ import base64
 from io import BytesIO
 from PIL import Image
 
+
+import tensorflow as tf
+import json
+
+from keras import backend as K
+
+
 def plot_tensors(dash, tensor_list, label, titles):
     image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2]) for tensor in tensor_list]
     displays = {}
@@ -153,6 +160,21 @@ def plot_tensors(dash, tensor_list, label, titles):
         imgurl = 'data:image/png;base64,' + img_str
         displays[titles[i]] = imgurl
     dash.appendDisplay(label, displays)
+
+def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
+    graph = session.graph
+    with graph.as_default():
+        freeze_var_names = list(set(v.op.name for v in tf.global_variables()).difference(keep_var_names or []))
+        output_names = output_names or []
+        output_names += [v.op.name for v in tf.global_variables()]
+        input_graph_def = graph.as_graph_def()
+        if clear_devices:
+            for node in input_graph_def.node:
+                node.device = ""
+        frozen_graph = tf.graph_util.convert_variables_to_constants(
+            session, input_graph_def, output_names, freeze_var_names)
+        return frozen_graph
+
 class UpdateUI(Callback):
     def __init__(self, total_epoch, dash, gen):
         self.total_epoch = total_epoch
@@ -228,6 +250,7 @@ class ImJoyPlugin():
                 "steps per epoch:{id:'steps', type:'number', min:1, placeholder:10}<br>"\
                 "batch size:{id:'batchsize', type:'number', min:1, placeholder:4}<br>"
                 )
+        api.register(name="freeze and export model", run=self.freeze_model, ui="freeze and export the graph as pb file")
         api.register(name="test", run=self.test, ui="number of images:{id:'num', type:'number', min:1, placeholder:10}<br>")
     async def load_model_weights(self, my):
         if not self._initialized:
@@ -320,5 +343,64 @@ class ImJoyPlugin():
                             validation_steps=4, steps_per_epoch=my.config.steps, epochs=epochs, verbose=2, callbacks=[updateUI, checkpointer, tensorboard])
         self.model.save(os.path.join(opt.checkpoints_dir,  my.config.name + '__model__.hdf5'))
 
+    async def freeze_model(self, my):
+        if not self._initialized:
+            api.alert('Please click `Anet-Lite` before loading weights.')
+            return
+        opt = self._opt
+        tf.identity(tf.get_default_graph().get_tensor_by_name(self.model.outputs[0].op.name+':0'), name="unet_output")
+        frozen_graph = freeze_session(K.get_session(),
+                                    output_names=['unet_output'])
+
+        config = json.loads(await api.getAttachment('model_config_template'))
+
+        config['label'] = 'Unet_{}x{}_{}_{}'.format(opt.input_size, opt.input_size, len(opt.input_channels), len(opt.target_channels))
+        config['model_name'] = config['label']
+
+        config['inputs'][0]['key'] = 'unet_input'
+        config['inputs'][0]['channels'] = [ ch[0] for ch in opt.input_channels]
+        config['inputs'][0]['shape'] = [1, opt.input_size, opt.input_size, len(opt.input_channels)]
+        config['inputs'][0]['size'] = opt.input_size
+
+        config['outputs'][0]['key'] = 'unet_output'
+        config['outputs'][0]['channels'] = [ ch[0] for ch in opt.target_channels]
+        config['outputs'][0]['shape'] = [1, opt.input_size, opt.input_size, len(opt.target_channels)]
+        config['outputs'][0]['size'] = opt.input_size
+
+        with open(os.path.join( opt.work_dir, 'config.json'), 'w') as f:
+            json.dump(config, f)
+
+        tf.train.write_graph(frozen_graph, opt.work_dir, "tensorflow_model.pb", as_text=False)
+
+        api.alert('model has been exported as ' + os.path.abspath(os.path.join(opt.work_dir, "tensorflow_model.pb")))
+
 api.export(ImJoyPlugin())
 </script>
+
+<attachment name="model_config_template">
+{
+  "outputs": [{
+    "name": "output",
+    "key": "output",
+    "type": "image",
+    "channels": ["SR"],
+    "size": 512,
+    "shape": [1, 512, 512, 1]
+  }],
+  "label": "Unet Model",
+  "model_name": "Unet_512x512",
+  "url": "",
+  "inputs": [{
+    "name": "input",
+    "key": "input",
+    "type": "image",
+    "channels": ["SR", "LR"],
+    "size": 512,
+    "shape": [1, 512, 512, 2],
+    "default": 0.0,
+    "required": true,
+    "hide": false
+  }]
+}
+
+</attachment>
