@@ -213,9 +213,12 @@ def masks_to_polygon(img_mask,label=None,simplify_tol=0, plot_simplify=False, sa
     features=[]
     contours = []
     
-    Ncells = img_mask.max()   
-    # Loop over all masks (except with index 0 which is background)
-    for i,obj_int in enumerate(range(1,Ncells)):
+    # Get all object ids, remove 0 since this is background
+    ind_objs = np.unique(img_mask)
+    ind_objs = np.delete(ind_objs, np.where(ind_objs == 0))
+    
+    # Loop over all masks
+    for obj_int in np.nditer(ind_objs):
         
         # Create binary mask for current object and find contour
         img_mask_loop = np.zeros((img_mask.shape[0],img_mask.shape[1]))

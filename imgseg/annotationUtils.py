@@ -124,15 +124,17 @@ class GeojsonImporter(AnnotationImporter):
 
 
         # Loop over list and create simple dictionary & get size of annotations
-        annot_dict = {}
-        roi_size_all = []
+        annot_dict   = {}
+        roi_size_all = {}
 
         skipped = []
+        
         for feat_idx, feat in enumerate(data_json['features']):
-            #print()
+         
             if feat['geometry']['type'] not in ['Polygon', 'LineString']:
                 skipped.append(feat['geometry']['type'])
                 continue
+            
             key_annot = 'annot_'+str(feat_idx)
             annot_dict[key_annot] = {}
             annot_dict[key_annot]['type'] = feat['geometry']['type']
@@ -140,11 +142,16 @@ class GeojsonImporter(AnnotationImporter):
             annot_dict[key_annot]['properties'] = feat['properties']
 
             # Store size of regions
-            roi_size_all.append(
+            if not (feat['properties']['label'] in  roi_size_all):
+                 roi_size_all[feat['properties']['label']] = []
+            
+            roi_size_all[feat['properties']['label']].append (
                 [annot_dict[key_annot]['pos'][:, 0].max() -
                  annot_dict[key_annot]['pos'][:, 0].min(),
                  annot_dict[key_annot]['pos'][:, 1].max()
                  - annot_dict[key_annot]['pos'][:, 1].min()])
+    
+            
         print('Skipped geometry type(s):', skipped)
         return annot_dict, roi_size_all,self.image_size
 
