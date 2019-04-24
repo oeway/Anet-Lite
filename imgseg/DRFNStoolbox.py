@@ -75,7 +75,7 @@ def generate_wsl(ws):
     grad = grad.astype(np.uint8)
     return grad
 
-def SeedLessWatershed(p_img, lamb, p_thresh = 0.5):
+def seedless_segment(p_img, lamb, p_thresh = 0.5):
     """
     Applies our dynamic watershed to 2D prob/dist image.
     """
@@ -88,6 +88,26 @@ def SeedLessWatershed(p_img, lamb, p_thresh = 0.5):
     markers_Probs_inv = find_maxima(Hrecons, mask = b_img)
     markers_Probs_inv = label(markers_Probs_inv)
     ws_labels = watershed(Hrecons, markers_Probs_inv, mask=b_img)
+    arrange_label = ArrangeLabel(ws_labels)
+    wsl = generate_wsl(arrange_label)
+    arrange_label[wsl > 0] = 0
+
+
+    return arrange_label
+
+
+def segment_with_seed(p_img, markers, lamb, p_thresh = 0.5):
+    """
+    Applies our dynamic watershed to 2D prob/dist image.
+    """
+    assert p_img.ndim == 2, "input image must be 2-dimension"
+    b_img = (p_img > p_thresh) + 0
+    Probs_inv = PrepareProb(p_img,convertuint8=False, inverse=True)
+
+    Hrecons = HreconstructionErosion(Probs_inv, lamb)
+    #markers_Probs_inv = find_maxima(Hrecons, mask = b_img)
+    #markers_Probs_inv = label(markers_Probs_inv)
+    ws_labels = watershed(Hrecons, markers, mask=b_img)
     arrange_label = ArrangeLabel(ws_labels)
     wsl = generate_wsl(arrange_label)
     arrange_label[wsl > 0] = 0

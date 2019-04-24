@@ -147,19 +147,21 @@ from keras import backend as K
 
 
 def plot_tensors(dash, tensor_list, label, titles):
-    image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2]) for tensor in tensor_list]
+    image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2], -1) for tensor in tensor_list]
     displays = {}
-    titles = titles or [ 'Tensor '+str(i) for i in range(len(image_list))]
+
     for i in range(len(image_list)):
-        im = image_list[i]
-        min = im.min()
-        im = Image.fromarray(((im-min)/(im.max()-min)*255).astype('uint8'))
-        buffered = BytesIO()
-        im.save(buffered, format="JPEG")
-        img_str = base64.b64encode(buffered.getvalue()).decode('ascii')
-        imgurl = 'data:image/png;base64,' + img_str
-        displays[titles[i]] = imgurl
-    dash.appendDisplay(label, displays)
+        ims = image_list[i]
+        for j in range(ims.shape[2]):
+            im = ims[:, :, j]
+            min = im.min()
+            im = Image.fromarray(((im - min) / (im.max() - min) * 255).astype('uint8'))
+            buffered = BytesIO()
+            im.save(buffered, format="JPEG")
+            img_str = base64.b64encode(buffered.getvalue()).decode('ascii')
+            imgurl = 'data:image/png;base64,' + img_str
+            displays[titles[i][j]] = imgurl
+        dash.appendDisplay(label, displays)
 
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
     graph = session.graph
