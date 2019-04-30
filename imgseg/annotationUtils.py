@@ -228,7 +228,7 @@ class BinaryMaskGenerator(MaskGenerator):
         self.erose_size = erose_size
         self.obj_size_rem = obj_size_rem
         self.save_indiv = save_indiv
-        self.image_size = image_size
+        self.image_size = (image_size[1], image_size[0])
 
 
     def generate(self, annot_dict):
