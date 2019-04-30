@@ -227,10 +227,11 @@ def masks_to_polygon(img_mask,label=None,simplify_tol=0, plot_simplify=False, sa
         
         # Proceeed only if one contour was found
         if len(contour) == 1:
-            
-            contour_asNumpy = contour[0]
+
+            contour_asNumpy = contour[0][:, np.argsort([1, 0])]
+            contour_asNumpy[:, 1] = np.array([img_mask.shape[1] - h[0] for h in contour[0]])
             contour_asList  = contour_asNumpy.tolist()
-    
+
             # Simplify polygon if tolerance is set to any value except 0
             if simplify_tol != 0:
                 poly_shapely = shapely_polygon(contour_asList)
@@ -246,7 +247,7 @@ def masks_to_polygon(img_mask,label=None,simplify_tol=0, plot_simplify=False, sa
             contours.append(contour_asNumpy)
             
             # Create and append feature for geojson
-            pol_loop = geojson_polygon(contour_asList)
+            pol_loop = geojson_polygon([contour_asList])
             features.append(Feature(geometry=pol_loop,properties= {"label":label}))
                 
         #elif len(contour) == 0:

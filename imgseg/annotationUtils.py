@@ -284,14 +284,14 @@ class BinaryMaskGenerator(MaskGenerator):
             elif roi['type'] == 'freehand' or roi['type'] == 'polygon' or roi['type'] == 'polyline' or roi['type'] == 'Polygon':
 
                 # Draw polygon
-                rr, cc = skimage_draw.polygon(roi_pos[:, 0], roi_pos[:, 1])
+                rr, cc = skimage_draw.polygon([self.image_size[0]-r for r in roi_pos[:, 1]], roi_pos[:, 0])
 
                 # Make sure it's not outside
                 rr[rr < 0] = 0
                 rr[rr > self.image_size[0] - 1] = self.image_size[0] - 1
 
                 cc[cc < 0] = 0
-                cc[cc > self.image_size[0] - 1] = self.image_size[0] - 1
+                cc[cc > self.image_size[1] - 1] = self.image_size[1] - 1
 
                 # Test if this region has already been added
                 if any(np.array_equal(rr, rr_test) for rr_test in rr_all) and any(np.array_equal(cc, cc_test) for cc_test in cc_all):
