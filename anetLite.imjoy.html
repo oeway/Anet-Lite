@@ -83,8 +83,8 @@ Once done, the result will be saved automatically into the testing folder.
 {
   "name": "Anet-Lite",
   "type": "native-python",
-  "version": "0.1.3",
-  "api_version": "0.1.1",
+  "version": "0.1.4",
+  "api_version": "0.1.5",
   "description": "A generic plugin for image-to-image translation with A-net.",
   "tags": ["CPU", "GPU", "Windows-CPU", "Window-GPU"],
   "ui": ["Generic Image-to-Image Translation",
@@ -260,7 +260,8 @@ class ImJoyPlugin():
             return
         lastPath = await api.getConfig('work_dir')
         try:
-            weight_path = await api.showFileDialog(root=lastPath, type='file')
+            targetObj = await api.showFileDialog(root='', type='file')
+            weight_path = targetObj.path
             if os.path.exists(weight_path):
                 print('loading weights from: ' + weight_path)
                 self.model.load_weights(weight_path)
@@ -271,7 +272,8 @@ class ImJoyPlugin():
         opt = self._opt
         export_model_to_js(self.model, opt.work_dir+'/__js_model__')
     async def run(self, my):
-        work_dir = await api.showFileDialog(title="Please select a working directory (with data)")
+        targetObj = await api.showFileDialog(title="Please select a working directory (with data)")
+        work_dir = targetObj.path
         api.setConfig('work_dir', work_dir)
         config = my.config
         print(config)
