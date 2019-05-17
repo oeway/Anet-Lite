@@ -307,12 +307,12 @@ class ImJoyPlugin():
         opt.target_channels = []
         for ch in config['target_ids'].split(','):
             name, filter = ch.split('=')
-            opt.target_channels.append((name, {'filter':filter, 'loader':ImageLoader()}, ))
+            opt.target_channels.append((name, {'filter':filter, 'loader':ImageLoader(scale=1.0)}, ))
         opt.input_nc = len(opt.input_channels)
         opt.target_nc = len(opt.target_channels)
         print(opt.input_channels, opt.target_channels)
         # opt.input_channels = [('cell', {'filter':'cells*.png', 'loader':ImageLoader()})]
-        # opt.target_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader()})]
+        # opt.target_channels = [('mask', {'filter':'mask_edge*.png', 'loader':ImageLoader(scale=1.0)})]
         self._opt = opt
         self.initialize(opt)
     async def test(self, my):
