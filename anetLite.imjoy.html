@@ -125,7 +125,7 @@ import numpy as np
 from PIL import Image
 from anet.options import Options
 from anet.data.examples import GenericTransformedImages
-from anet.data.file_loader import ImageLoader
+from anet.data.file_loader import FileLoader
 from anet.networks import UnetGenerator, get_dssim_l1_loss
 from keras.callbacks import ModelCheckpoint, TensorBoard, Callback
 from keras.models import load_model
@@ -138,13 +138,32 @@ from keras.models import load_model
 import base64
 from io import BytesIO
 from PIL import Image
-
+import scipy
 
 import tensorflow as tf
 import json
 
 from keras import backend as K
 
+class ImageLoader(FileLoader):
+    def __init__(self, mode="F", scale=1.0):
+        self.mode = mode
+        self.scale = scale
+    def cache(self, path):
+        return True
+    def __call__(self, path):
+        if self.mode == 'F':
+            image = Image.open(path).convert(self.mode)
+            image = np.array(image)
+            if image.ndim == 3:
+                image = image[:, :, 0]
+                if self.scale != 1.0:
+                    image = scipy.misc.imresize(image, self.scale)
+                return Image.fromarray(image)
+        image = Image.open(path)
+        image = np.array(image)
+        image = scipy.misc.imresize(image, self.scale)
+        return Image.fromarray(image).convert(self.mode)
 
 def plot_tensors(dash, tensor_list, label, titles):
     image_list = [tensor.reshape(tensor.shape[-3], tensor.shape[-2], -1) for tensor in tensor_list]
@@ -284,7 +303,7 @@ class ImJoyPlugin():
         opt.input_channels = []
         for ch in config['input_ids'].split(','):
             name, filter = ch.split('=')
-            opt.input_channels.append((name, {'filter':filter, 'loader':ImageLoader()}, ))
+            opt.input_channels.append((name, {'filter':filter, 'loader':ImageLoader(scale=1.0)}, ))
         opt.target_channels = []
         for ch in config['target_ids'].split(','):
             name, filter = ch.split('=')
