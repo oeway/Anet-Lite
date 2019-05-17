@@ -180,7 +180,7 @@ def plot_tensors(dash, tensor_list, label, titles):
             img_str = base64.b64encode(buffered.getvalue()).decode('ascii')
             imgurl = 'data:image/png;base64,' + img_str
             displays[titles[i][j]] = imgurl
-        dash.appendDisplay(label, displays)
+    dash.appendDisplay(label, displays)
 
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
     graph = session.graph
