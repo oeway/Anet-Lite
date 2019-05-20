@@ -229,7 +229,7 @@ def masks_to_polygon(img_mask,label=None,simplify_tol=0, plot_simplify=False, sa
         if len(contour) == 1:
 
             contour_asNumpy = contour[0][:, np.argsort([1, 0])]
-            contour_asNumpy[:, 1] = np.array([img_mask.shape[1] - h[0] for h in contour[0]])
+            contour_asNumpy[:, 1] = np.array([img_mask.shape[0] - h[0] for h in contour[0]])
             contour_asList  = contour_asNumpy.tolist()
 
             # Simplify polygon if tolerance is set to any value except 0
