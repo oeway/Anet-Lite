@@ -248,6 +248,7 @@ class BinaryMaskGenerator(MaskGenerator):
         # Filled masks and edge mask for polygons
         mask_fill = np.zeros(self.image_size, dtype=np.uint8)
         mask_edge = np.zeros(self.image_size, dtype=np.uint8)
+        mask_labels = np.zeros(self.image_size, dtype=np.uint16)
 
         rr_all = []
         cc_all = []
@@ -316,6 +317,7 @@ class BinaryMaskGenerator(MaskGenerator):
                 # Save array for mask and edge
                 mask_fill[mask_fill_roi_erode] = 1
                 mask_edge[mask_edge_roi] = 1
+                mask_labels[mask_fill_roi_erode] = i_roi
 
                 if self.save_indiv is True:
                     mask_edge_indiv[:, :, i_roi] = mask_edge_roi.astype('bool')
@@ -351,6 +353,7 @@ class BinaryMaskGenerator(MaskGenerator):
             # Assign to dictionary for return
             mask_dict['edge'] = mask_edge
             mask_dict['fill'] = mask_fill.astype('bool')
+            mask_dict['labels'] = mask_labels.astype('uint16')
 
             if self.save_indiv is True:
                 mask_dict['edge_indiv'] = mask_edge_indiv
@@ -363,6 +366,7 @@ class BinaryMaskGenerator(MaskGenerator):
         elif np.any(mask_edge_freeline):
             mask_dict['edge'] = mask_edge_freeline
             mask_dict['fill'] = mask_fill.astype('bool')
+            mask_dict['labels'] = mask_labels.astype('uint16')
 
             mask_dict['edge_indiv'] = np.zeros(self.image_size+(1,), dtype=np.uint8)
             mask_dict['fill_indiv'] = np.zeros(self.image_size+(1,), dtype=np.uint8)
@@ -372,6 +376,7 @@ class BinaryMaskGenerator(MaskGenerator):
 
 
         return mask_dict
+
 
 
 class DistanceMapGenerator(MaskGenerator):
