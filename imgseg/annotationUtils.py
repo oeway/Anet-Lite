@@ -506,7 +506,7 @@ class WeightedEdgeMaskGenerator(MaskGenerator):
         return mask_dict
 
     
-class MaskBoarderGenerator(MaskGenerator):
+class WeightedBoarderGenerator(MaskGenerator):
     '''
     https://github.com/selimsef/dsb2018_topcoders
     '''
@@ -560,6 +560,6 @@ class MaskBoarderGenerator(MaskGenerator):
 
         # Note: saved as float 16 - to plot has to be converted to float32
         # To be saved rescaled as 8 bit
-        mask_dict['edge_weighted'] = msk.astype('float16')
+        mask_dict['weighted_boarder'] = msk.astype('float16')
 
         return mask_dict
