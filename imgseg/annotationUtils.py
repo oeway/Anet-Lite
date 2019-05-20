@@ -504,3 +504,62 @@ class WeightedEdgeMaskGenerator(MaskGenerator):
         mask_dict['edge_weighted'] = mask_edge.astype('float16')
 
         return mask_dict
+
+    
+class MaskBoarderGenerator(MaskGenerator):
+    '''
+    https://github.com/selimsef/dsb2018_topcoders
+    '''
+
+    def __init__(self):
+        pass
+
+    def generate(self, annot_dict, mask_dict):
+        labels = mask_dict['labels']
+ 
+        tmp = dilation(labels > 0, square(9))    
+        tmp2 = watershed(tmp, labels, mask=tmp, watershed_line=True) > 0
+        tmp = tmp ^ tmp2
+        tmp = dilation(tmp, square(7))
+        msk = (255 * tmp).astype('uint8')
+
+        props = measure.regionprops(labels)
+        msk0 = 255 * (labels > 0)
+        msk0 = msk0.astype('uint8')
+
+        msk1 = np.zeros_like(labels, dtype='bool')
+
+        max_area = np.max([p.area for p in props])
+
+        for y0 in range(labels.shape[0]):
+            for x0 in range(labels.shape[1]):
+                if not tmp[y0, x0]:
+                    continue
+                if labels[y0, x0] == 0:
+                    if max_area > 4000:
+                        sz = 6
+                    else:
+                        sz = 3
+                else:
+                    sz = 3
+                    if props[labels[y0, x0] - 1].area < 300:
+                        sz = 1
+                    elif props[labels[y0, x0] - 1].area < 2000:
+                        sz = 2
+                uniq = np.unique(labels[max(0, y0-sz):min(labels.shape[0], y0+sz+1), max(0, x0-sz):min(labels.shape[1], x0+sz+1)])
+                if len(uniq[uniq > 0]) > 1:
+                    msk1[y0, x0] = True
+                    msk0[y0, x0] = 0
+
+        msk1 = 255 * msk1
+        msk1 = msk1.astype('uint8')
+
+        msk2 = np.zeros_like(labels, dtype='uint8')
+        msk = np.stack((msk0, msk1, msk2))
+        msk = np.rollaxis(msk, 0, 3)
+
+        # Note: saved as float 16 - to plot has to be converted to float32
+        # To be saved rescaled as 8 bit
+        mask_dict['edge_weighted'] = msk.astype('float16')
+
+        return mask_dict
