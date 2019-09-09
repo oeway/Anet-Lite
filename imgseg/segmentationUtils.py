@@ -13,7 +13,7 @@ from skimage.filters import threshold_otsu
 from scipy.ndimage.morphology import binary_fill_holes
 from scipy import ndimage
 from scipy import signal
-from scipy.misc import imsave
+from imageio import imsave
 
 import palettable   # pip install palettable
 

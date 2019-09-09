@@ -1,0 +1,9 @@
+numpy
+scipy
+imageio
+scikit-image
+palettable
+shapely
+descartes
+geojson
+read_roi
