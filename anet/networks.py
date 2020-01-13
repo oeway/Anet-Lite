@@ -5,7 +5,7 @@ from tensorflow.keras.layers import MaxPooling2D, Dense, GlobalAveragePooling2D,
 from tensorflow.keras.layers import add, subtract, multiply
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import LeakyReLU, PReLU
-from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.layers import Concatenate, concatenate
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import DepthwiseConv2D
 from tensorflow.keras.optimizers import Adam
@@ -369,21 +369,14 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha,
     return Activation(relu6, name='conv_pw_%d_relu' % block_id)(x)
 
 
-def MobileUNet(input_shape=None,
+def MobileUNet(input_size=256, input_channels=1, target_channels=1, base_filter=64, output_layer=None,
                alpha=1.0,
                alpha_up=1.0,
                depth_multiplier=1,
-               dropout=1e-3,
-               input_tensor=None):
-    if input_tensor is None:
-        img_input = Input(shape=input_shape)
-    else:
-        if not K.is_keras_tensor(input_tensor):
-            img_input = Input(tensor=input_tensor, shape=input_shape)
-        else:
-            img_input = input_tensor
+               dropout=1e-3):
+    input_layer = Input(shape=[input_size, input_size, input_channels], name="mobile_unet_input")
 
-    b00 = _conv_block(img_input, 32, alpha, strides=(2, 2), block_id=0) # ==> 56
+    b00 = _conv_block(input_layer, 32, alpha, strides=(2, 2), block_id=0) # ==> 56
     b01 = _depthwise_conv_block(b00, 64, alpha, depth_multiplier, block_id=1) # ==> 28
 
     b02 = _depthwise_conv_block(b01, 128, alpha, depth_multiplier, block_id=2, strides=(2, 2)) # ==> 14
@@ -436,12 +429,14 @@ def MobileUNet(input_shape=None,
     # b18 = _depthwise_conv_block(up5, filters, alpha_up, depth_multiplier, block_id=18)
     b18 = _conv_block(up5, filters, alpha_up, block_id=18)
 
-    x = Conv2D(1, (1, 1), kernel_initializer='he_normal', activation='linear')(b18)
+    x = Conv2D(target_channels, (1, 1), kernel_initializer='he_normal', activation='linear')(b18)
     #x = BilinearUpSampling2D(size=(2, 2))(x)
     x = UpSampling2D(size=(2, 2))(x)
-    x = Activation('sigmoid')(x)
+    # x = Activation('sigmoid')(x)
+    if output_layer is not None:
+        x = output_layer(x)
 
-    model = Model(img_input, x)
+    model = Model(input_layer, x)
 
     return model
 
