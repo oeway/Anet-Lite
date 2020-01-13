@@ -5,8 +5,8 @@ from anet.data.examples import GenericTransformedImages
 from anet.data.file_loader import ImageLoader
 
 from anet.networks import UnetGenerator, get_dssim_l1_loss
-from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.models import load_model
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.models import load_model
 from anet.data.examples import TransformedTubulin001
 from anet.data.utils import make_generator
 from anet.utils import export_model_to_js

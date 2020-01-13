@@ -11,3 +11,4 @@ def export_model_to_js(model, path, remove_input_size=True):
     # recover shape
     if remove_input_size and input_shape_bk and input_layer:
         input_layer.batch_input_shape = input_shape_bk
+

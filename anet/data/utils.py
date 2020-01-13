@@ -3,6 +3,8 @@ import numpy as np
 import hashlib
 import json
 from PIL import Image
+import urllib.request
+import zipfile
 
 EPS = 0.0001
 
@@ -91,3 +93,13 @@ def save_images(batch, paths, output_dir, label=''):
         for i in range(image.shape[2]):
             im = Image.fromarray(image[:, :, i].astype('float32'))
             im.save(output_path+'_'+label+'_c'+str(i)+'.tif')
+
+
+def download_with_url(url_string, file_path, unzip=False):
+    with urllib.request.urlopen(url_string) as response, open(file_path, 'wb') as out_file:
+        data = response.read() # a `bytes` object
+        out_file.write(data)
+
+    if unzip:
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(os.path.dirname(file_path))
