@@ -51,8 +51,8 @@ class UpdateUI(Callback):
         #api.showProgress(self.epoch/self.total_epoch*100)
         print('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' '+ str(logs))
         xbatch, ybatch = next(self.gen)
-        ypbatch = self.model.predict(xbatch, batch_size=1)
-        tensor_list = [ypbatch, xbatch, ybatch]
+        ypbatch = self.model.predict(xbatch[:1, :, :, :], batch_size=1)
+        tensor_list = [ypbatch, xbatch[:1, :, :, :], ybatch[:1, :, :, :]]
         label = 'Step '+ str(self.step)
         titles = ["output", 'input', 'target']
         save_tensors(tensor_list, label, titles, self.output_dir)

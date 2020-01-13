@@ -375,8 +375,9 @@ def MobileUNet(input_size=256, input_channels=1, target_channels=1, base_filter=
                depth_multiplier=1,
                dropout=1e-3):
     input_layer = Input(shape=[input_size, input_size, input_channels], name="mobile_unet_input")
+    i00 = _depthwise_conv_block(input_layer, 8, alpha, depth_multiplier, block_id=100, strides=(1, 1))
 
-    b00 = _conv_block(input_layer, 32, alpha, strides=(2, 2), block_id=0) # ==> 56
+    b00 = _depthwise_conv_block(i00, 64, alpha, depth_multiplier, block_id=0, strides=(2, 2)) # ==> 56
     b01 = _depthwise_conv_block(b00, 64, alpha, depth_multiplier, block_id=1) # ==> 28
 
     b02 = _depthwise_conv_block(b01, 128, alpha, depth_multiplier, block_id=2, strides=(2, 2)) # ==> 14
@@ -425,13 +426,23 @@ def MobileUNet(input_size=256, input_channels=1, target_channels=1, base_filter=
     b17 = _depthwise_conv_block(up4, filters, alpha_up, depth_multiplier, block_id=17)
 
     filters = int(32 * alpha)
-    up5 = concatenate([b17, b00], axis=3)
-    # b18 = _depthwise_conv_block(up5, filters, alpha_up, depth_multiplier, block_id=18)
+    up5 = concatenate([
+        Conv2DTranspose(filters, (2, 2), strides=(2, 2), padding='same')(b17),
+        i00,
+    ], axis=3)
+    #b18 = _depthwise_conv_block(up5, filters, alpha_up, depth_multiplier, block_id=18)
     b18 = _conv_block(up5, filters, alpha_up, block_id=18)
 
-    x = Conv2D(target_channels, (1, 1), kernel_initializer='he_normal', activation='linear')(b18)
-    #x = BilinearUpSampling2D(size=(2, 2))(x)
-    x = UpSampling2D(size=(2, 2))(x)
+    #x = Conv2D(target_channels, (1, 1), kernel_initializer='he_normal', activation='linear')(b18)
+
+    # refinement layers similar to Deep Image Matting https://arxiv.org/pdf/1703.03872.pdf
+    b19 = _depthwise_conv_block(b18, filters, alpha_up, depth_multiplier, block_id=19)
+    b20 = add([b18, b19])
+
+    
+    x = Conv2D(target_channels, (1, 1), kernel_initializer='he_normal', activation='linear')(b20)
+    # x = BilinearUpSampling2D(size=(2, 2))(x)
+    # x = UpSampling2D(size=(2, 2))(x)
     # x = Activation('sigmoid')(x)
     if output_layer is not None:
         x = output_layer(x)

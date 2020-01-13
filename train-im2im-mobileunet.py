@@ -16,16 +16,21 @@ from anet.utils import export_model_to_js, UpdateUI
 
 
 opt = Options().parse()
-opt.input_channels = [('bf1', {'filter':'BF-10um.png', 'loader':ImageLoader()}), ('bf2', {'filter':'BF+10um.png', 'loader':ImageLoader()}), ('nuclei', {'filter':'DAPI-MaxProj.png', 'loader':ImageLoader()})]
-opt.target_channels = [('mebrane', {'filter':'GFP.png', 'loader':ImageLoader()})]
+scale_factor = 0.5
+opt.input_channels = [('bf1', {'filter':'BF-10um.png', 'loader':ImageLoader(scale=scale_factor)}), ('bf2', {'filter':'BF+10um.png', 'loader':ImageLoader(scale=scale_factor)}), ('nuclei', {'filter':'DAPI-MaxProj.png', 'loader':ImageLoader(scale=scale_factor)})]
+opt.target_channels = [('mebrane', {'filter':'GFP.png', 'loader':ImageLoader(scale=scale_factor)})]
 opt.input_nc = len(opt.input_channels)
 opt.target_nc = len(opt.target_channels)
+opt.batch_size = 10
 
 if not os.path.exists(os.path.join(opt.work_dir, 'train')):
     print('Downloading dataset...')
     os.makedirs(opt.work_dir, exist_ok=True)
     download_with_url('https://kth.box.com/shared/static/r6kjgvdkcuehssxipaxqxfflmz8t65u1.zip', os.path.join(opt.work_dir, 'SegmentationTrainingProcessed_CG_20200109-offset-corrected.zip'), unzip=True)
 
+# Total params: 6,764,136
+# Trainable params: 6,736,130
+# Non-trainable params: 28,006
 model = MobileUNet(input_size=opt.input_size, input_channels=opt.input_nc, target_channels=opt.target_nc)
 
 if opt.load_from is not None:
@@ -36,6 +41,9 @@ model.compile(optimizer='adam',
               loss=DSSIM_L1,
               metrics=['mse', DSSIM_L1])
 
+
+model.summary()
+
 sources = GenericTransformedImages(opt)
 
 tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
@@ -43,6 +51,6 @@ checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir, 'weigh
 updateUI = UpdateUI(1000, make_generator(sources['valid'], batch_size=opt.batch_size), os.path.join(opt.work_dir, 'outputs'))
 model.fit_generator(make_generator(sources['train'], batch_size=opt.batch_size),
                     validation_data=make_generator(sources['valid'], batch_size=opt.batch_size),
-                    validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, callbacks=[tensorboard, checkpointer, updateUI])
+                    validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, use_multiprocessing=True, workers=10, callbacks=[tensorboard, checkpointer, updateUI])
 
 export_model_to_js(model, opt.work_dir+'/__js_model__')

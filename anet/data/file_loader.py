@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from PIL import Image
+import skimage.transform
 
 
 class FileLoader():
@@ -15,8 +16,9 @@ class FileLoader():
 
 
 class ImageLoader(FileLoader):
-    def __init__(self, mode="F"):
+    def __init__(self, mode="F", scale=1.0):
         self.mode = mode
+        self.scale = scale
     def cache(self, path):
         return True
     def __call__(self, path):
@@ -25,8 +27,14 @@ class ImageLoader(FileLoader):
             image = np.array(image)
             if image.ndim == 3:
                 image = image[:, :, 0]
+                if self.scale != 1.0:
+                    image = skimage.transform.rescale(image, self.scale)
+                    # image = scipy.misc.imresize(image, self.scale)
                 return Image.fromarray(image)
-        return Image.open(path).convert(self.mode)
+        image = Image.open(path)
+        image = np.array(image)
+        image = skimage.transform.rescale(image, self.scale)
+        return Image.fromarray(image).convert(self.mode)
 
 
 class ImageJRoi2Mask(FileLoader):
