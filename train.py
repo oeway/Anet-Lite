@@ -26,7 +26,7 @@ sources = TransformedTubulin001(opt)
 tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
 checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir, 'weights.hdf5'), verbose=1, save_best_only=True)
 model.fit_generator(make_generator(sources['train'], batch_size=opt.batch_size),
-                    validation_data=make_generator(sources['test'], batch_size=opt.batch_size),
-                    validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, callbacks=[checkpointer, tensorboard])
+                   validation_data=make_generator(sources['test'], batch_size=opt.batch_size),
+                   validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, callbacks=[checkpointer, tensorboard])
 
 export_model_to_js(model, opt.work_dir+'/__js_model__')

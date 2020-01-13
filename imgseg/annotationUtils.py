@@ -17,6 +17,7 @@ import json
 from PIL import Image, ImageDraw
 from skimage import draw as skimage_draw
 from skimage import morphology
+from skimage import measure
 from scipy import ndimage
 
 from skimage.io import imsave
@@ -128,13 +129,13 @@ class GeojsonImporter(AnnotationImporter):
         roi_size_all = {}
 
         skipped = []
-        
+
         for feat_idx, feat in enumerate(data_json['features']):
-         
+
             if feat['geometry']['type'] not in ['Polygon', 'LineString']:
                 skipped.append(feat['geometry']['type'])
                 continue
-            
+
             key_annot = 'annot_'+str(feat_idx)
             annot_dict[key_annot] = {}
             annot_dict[key_annot]['type'] = feat['geometry']['type']
@@ -144,14 +145,14 @@ class GeojsonImporter(AnnotationImporter):
             # Store size of regions
             if not (feat['properties']['label'] in  roi_size_all):
                  roi_size_all[feat['properties']['label']] = []
-            
+
             roi_size_all[feat['properties']['label']].append (
                 [annot_dict[key_annot]['pos'][:, 0].max() -
                  annot_dict[key_annot]['pos'][:, 0].min(),
                  annot_dict[key_annot]['pos'][:, 1].max()
                  - annot_dict[key_annot]['pos'][:, 1].min()])
-    
-            
+
+
         print('Skipped geometry type(s):', skipped)
         return annot_dict, roi_size_all,self.image_size
 
@@ -317,13 +318,14 @@ class BinaryMaskGenerator(MaskGenerator):
                 # Save array for mask and edge
                 mask_fill[mask_fill_roi_erode] = 1
                 mask_edge[mask_edge_roi] = 1
-                mask_labels[mask_fill_roi_erode] = i_roi
+                mask_labels[mask_fill_roi_erode] = i_roi+1
 
                 if self.save_indiv is True:
                     mask_edge_indiv[:, :, i_roi] = mask_edge_roi.astype('bool')
                     mask_fill_indiv[
                         :, :, i_roi] = mask_fill_roi_erode.astype('bool')
-                    i_roi = i_roi + 1
+
+                i_roi = i_roi + 1
 
             else:
                 roi_type = roi['type']
@@ -505,8 +507,8 @@ class WeightedEdgeMaskGenerator(MaskGenerator):
 
         return mask_dict
 
-    
-class WeightedBoarderGenerator(MaskGenerator):
+
+class BorderMaskGenerator(MaskGenerator):
     '''
     https://github.com/selimsef/dsb2018_topcoders
     '''
@@ -516,11 +518,11 @@ class WeightedBoarderGenerator(MaskGenerator):
 
     def generate(self, annot_dict, mask_dict):
         labels = mask_dict['labels']
- 
-        tmp = dilation(labels > 0, square(9))    
-        tmp2 = watershed(tmp, labels, mask=tmp, watershed_line=True) > 0
+
+        tmp = morphology.dilation(labels > 0, morphology.square(9))
+        tmp2 = morphology.watershed(tmp, labels, mask=tmp, watershed_line=True) > 0
         tmp = tmp ^ tmp2
-        tmp = dilation(tmp, square(7))
+        tmp = morphology.dilation(tmp, morphology.square(7))
         msk = (255 * tmp).astype('uint8')
 
         props = measure.regionprops(labels)
@@ -542,10 +544,10 @@ class WeightedBoarderGenerator(MaskGenerator):
                         sz = 3
                 else:
                     sz = 3
-                    if props[labels[y0, x0] - 1].area < 300:
-                        sz = 1
-                    elif props[labels[y0, x0] - 1].area < 2000:
-                        sz = 2
+                    # if props[labels[y0, x0] - 1].area < 300:
+                    #     sz = 1
+                    # elif props[labels[y0, x0] - 1].area < 2000:
+                    #     sz = 2
                 uniq = np.unique(labels[max(0, y0-sz):min(labels.shape[0], y0+sz+1), max(0, x0-sz):min(labels.shape[1], x0+sz+1)])
                 if len(uniq[uniq > 0]) > 1:
                     msk1[y0, x0] = True
