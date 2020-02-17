@@ -37,7 +37,15 @@ class UpdateUI(Callback):
         self.step = 0
         self.gen = gen
         self.output_dir = output_dir
-    
+
+    def test(self, model):
+        xbatch, ybatch = next(self.gen)
+        ypbatch = model.predict(xbatch[:1, :, :, :], batch_size=1)
+        tensor_list = [ypbatch, xbatch[:1, :, :, :], ybatch[:1, :, :, :]]
+        label = 'initial'
+        titles = ["output", 'input', 'target']
+        save_tensors(tensor_list, label, titles, self.output_dir)
+
     def on_batch_end(self, batch, logs):
         self.logs = logs
         print('training epoch:'+str(self.epoch)+'/'+str(self.total_epoch) + ' ' + str(logs))

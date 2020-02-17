@@ -15,10 +15,10 @@ from anet.utils import export_model_to_js, UpdateUI
 # importlib.reload(UnetGenerator)
 
 opt = Options().parse()
-scale_factor = 0.5
-opt.input_channels = [('bf1', {'filter':'BF-10um.png', 'loader':ImageLoader(scale=scale_factor)}), ('bf2', {'filter':'BF+10um.png', 'loader':ImageLoader(scale=scale_factor)}), ('nuclei', {'filter':'DAPI-MaxProj.png', 'loader':ImageLoader(scale=scale_factor)})]
-opt.target_channels = [('mebrane', {'filter':'GFP.png', 'loader':ImageLoader(scale=scale_factor)})]
-
+opt.input_scale = 0.5
+opt.target_scale = 0.5
+opt.input_channels = [('bf1', {'filter':'BF-10um.png', 'loader':ImageLoader(scale=opt.input_scale)}), ('bf2', {'filter':'BF+10um.png', 'loader':ImageLoader(scale=opt.input_scale)}), ('nuclei', {'filter':'DAPI-MaxProj.png', 'loader':ImageLoader(scale=opt.input_scale)})]
+opt.target_channels = [('mebrane', {'filter':'GFP.png', 'loader':ImageLoader(scale=opt.target_scale)})]
 opt.input_nc = len(opt.input_channels)
 opt.target_nc = len(opt.target_channels)
 opt.batch_size = 10
@@ -44,9 +44,9 @@ sources = GenericTransformedImages(opt)
 
 tensorboard = TensorBoard(log_dir=os.path.join(opt.checkpoints_dir, 'logs'), histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=True)
 checkpointer = ModelCheckpoint(filepath=os.path.join(opt.checkpoints_dir, 'weights.hdf5'), verbose=1, save_best_only=True)
-updateUI = UpdateUI(1000, make_generator(sources['valid'], batch_size=opt.batch_size), os.path.join(opt.work_dir, 'outputs'))
+updateUI = UpdateUI(1000, make_generator(sources['valid'], batch_size=opt.batch_size), opt.save_dir)
 model.fit_generator(make_generator(sources['train'], batch_size=opt.batch_size),
                     validation_data=make_generator(sources['valid'], batch_size=opt.batch_size),
-                    validation_steps=4, steps_per_epoch=1, epochs=1000, verbose=2, use_multiprocessing=True, workers=10, callbacks=[tensorboard, checkpointer, updateUI])
+                    validation_steps=4, steps_per_epoch=200, epochs=1000, verbose=2, use_multiprocessing=True, workers=10, callbacks=[tensorboard, checkpointer, updateUI])
 
 export_model_to_js(model, opt.work_dir+'/__js_model__')

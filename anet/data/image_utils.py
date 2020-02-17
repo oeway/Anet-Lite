@@ -406,9 +406,8 @@ class RandomCropNumpy(object):
         th, tw = self.size
         if w == tw and h == th:
             return img
-
-        x1 = self.random_state.randint(0, w - tw)
-        y1 = self.random_state.randint(0, h - th)
+        x1 = self.random_state.randint(0, w - tw) if w - tw > 0 else 0
+        y1 = self.random_state.randint(0, h - th) if h - th > 0 else 0
         return img[y1: y1 + th, x1:x1 + tw, :]
 
 

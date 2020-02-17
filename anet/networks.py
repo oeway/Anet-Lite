@@ -1,3 +1,6 @@
+import json
+import os
+
 from tensorflow.keras import backend as K
 from tensorflow.keras import Input
 from tensorflow.keras.layers import Layer, Activation, Dropout, Conv2D, Conv2DTranspose, UpSampling2D
@@ -12,6 +15,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications import mobilenet
 import tensorflow as tf
 import numpy as np
+
 
 def upConv(x, **kwargs):
     x = UpSampling2D(size=(2, 2))(x)
@@ -452,6 +456,185 @@ def MobileUNet(input_size=256, input_channels=1, target_channels=1, base_filter=
     return model
 
 
+
+class MobileUNetFS():
+    def __init__(self, input_size=256, input_channels=1, target_channels=1, mode='linear', weight_decay=True, train_encoder=True):
+        self._input_shape = [input_size, input_size, input_channels]
+        self._trainable = train_encoder
+        self._input_channels = input_channels
+        self._target_channels = target_channels
+        self._decay = weight_decay
+        self._mode = mode
+
+    def _upconv(self, inputs, n_filters, kernel_size, strides):
+        if self._decay:
+            # L2 regularization on weights
+            x = tf.keras.layers.Conv2DTranspose(
+                n_filters,
+                kernel_size,
+                strides,
+                padding='same',
+                use_bias=False,
+                kernel_regularizer=tf.keras.regularizers.l2())(inputs)
+
+        else:
+            x = tf.keras.layers.Conv2DTranspose(
+                n_filters,
+                kernel_size,
+                strides,
+                padding='same',
+                use_bias=False)(inputs)
+
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.activations.relu(x)
+
+        return x
+
+    def _conv_ds(self, inputs, n_filters, kernel_size, strides):
+        if self._decay:
+            # L2 regularization on weights
+            x = tf.keras.layers.SeparableConv2D(
+                n_filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                padding='same',
+                kernel_regularizer=tf.keras.regularizers.l2())(inputs)
+
+        else:
+            x = tf.keras.layers.SeparableConv2D(
+                n_filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                padding='same')(inputs)
+
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.activations.relu(x)
+
+        return x
+
+    def _residual_block(self, inputs, n_filters, kernel_size, strides):
+        x = self._conv_ds(
+            inputs,
+            n_filters=n_filters,
+            kernel_size=kernel_size,
+            strides=strides
+        )
+
+        x = self._conv_ds(
+            x,
+            n_filters=n_filters,
+            kernel_size=kernel_size,
+            strides=strides
+        )
+
+        # depthwise conv skip connection
+        if self._decay:
+            skip = tf.keras.layers.SeparableConv2D(
+                n_filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                padding='same',
+                kernel_regularizer=tf.keras.regularizers.l2())(x)
+
+        else:
+            skip = tf.keras.layers.SeparableConv2D(
+                n_filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                padding='same')(x)
+
+        skip = tf.keras.layers.BatchNormalization()(skip)
+        skip = tf.keras.activations.relu(skip)
+
+        out = tf.keras.layers.Add()([skip, x])
+
+        return out
+
+    def build(self, depthwise_decoder=True):
+        """
+        Builds U-Net with pre trainded MobileNetV2
+        backbone. This one uses fractionally strided
+        convolutions to upsample
+        Encoder is using ImageNet weights and can be
+        frozen or trained with decoder
+        :return:    tf.keras.models.Model
+                    Ready to compile MobileUnet
+        """
+        base = tf.keras.applications.MobileNetV2(
+            input_shape=self._input_shape,
+            include_top=False,
+            weights='imagenet'
+        )
+
+        if not self._trainable:
+            base.trainable = False
+
+        # upsample and concat with block 13
+        base_out = base.get_layer('block_16_project')
+        skip_b13 = base.get_layer('block_13_expand_relu')
+        n_filters = tf.keras.backend.int_shape(skip_b13.output)[-1]
+
+        # bridge first
+        x = self._residual_block(base_out.output, n_filters=n_filters, kernel_size=3, strides=1)
+        x = self._residual_block(x, n_filters=n_filters, kernel_size=3, strides=1)
+
+        # and start going up
+        x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+        x = tf.keras.layers.Concatenate()([x, skip_b13.output])
+        x = self._residual_block(x, n_filters=n_filters, kernel_size=3, strides=1)
+
+        # upsample and concat with block 6
+        skip_b6 = base.get_layer('block_6_expand_relu')
+        n_filters = tf.keras.backend.int_shape(skip_b6.output)[-1]
+
+        x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+        x = tf.keras.layers.Concatenate()([x, skip_b6.output])
+        x = self._residual_block(x, n_filters=n_filters, kernel_size=3, strides=1)
+
+        # upsample and concat with block 3
+        skip_b3 = base.get_layer('block_3_expand_relu')
+        n_filters = tf.keras.backend.int_shape(skip_b3.output)[-1]
+
+        x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+        x = tf.keras.layers.Concatenate()([x, skip_b3.output])
+        x = self._residual_block(x, n_filters=n_filters, kernel_size=3, strides=1)
+
+        # upsample and concat with block 1
+        skip_b1 = base.get_layer('block_1_expand_relu')
+        n_filters = tf.keras.backend.int_shape(skip_b1.output)[-1]
+
+        x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+        x = tf.keras.layers.Concatenate()([x, skip_b1.output])
+        x = self._residual_block(x, n_filters=n_filters, kernel_size=3, strides=1)
+
+        if self._mode == 'binary':
+            x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+            x = tf.keras.layers.SeparableConv2D(1, kernel_size=3, strides=1, padding='same')(x)
+            out = tf.keras.activations.sigmoid(x)
+        elif self._mode == 'softmax':
+            x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+            x = tf.keras.layers.SeparableConv2D(self._target_channels, kernel_size=3, strides=1, padding='same')(x)
+            out = tf.keras.activations.softmax(x)
+        else:
+            x = self._upconv(x, n_filters=n_filters, kernel_size=3, strides=2)
+            x = tf.keras.layers.SeparableConv2D(self._target_channels, kernel_size=3, strides=1, padding='same')(x)
+            out = tf.keras.activations.linear(x)
+        return tf.keras.models.Model(inputs=base.input, outputs=out)
+
+
+def generate_m2_unet(input_size=None, input_channel_num=3, output_channel_num=1, data_format='channels-last'):
+    config = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'m2unet-channels-last.json'), 'r'))
+    assert config['config']['layers'][0]['class_name'] == 'InputLayer'
+    config['config']['layers'][0]['config']['batch_input_shape'] = [None, input_size, input_size, input_channel_num]
+    
+    assert config['config']['layers'][-2]['class_name'] == 'Conv2D'
+    config['config']['layers'][-2]['config']['filters'] = output_channel_num
+    
+    assert data_format == 'channels-last'
+    return tf.keras.models.model_from_json(json.dumps(config))
+
 if __name__ == '__main__':
-    model = UnetGenerator(input_size=256, input_channels=16, target_channels=1, base_filter=16)
-    model = DBPNGenerator(input_size=256, input_channels=1, target_nc=1, scale_factor=4, base_filter=16, feat=64, depth=2)
+    net = generate_m2_unet(input_channel_num=1, output_channel_num=3)
+    net.summary()
+    # model = UnetGenerator(input_size=256, input_channels=16, target_channels=1, base_filter=16)
+    # model = DBPNGenerator(input_size=256, input_channels=1, target_nc=1, scale_factor=4, base_filter=16, feat=64, depth=2)
