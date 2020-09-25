@@ -7,6 +7,6 @@ shapely
 descartes
 geojson
 read_roi
-tensorflow==2.0.0
+tensorflow==2.0.3
 #tensorflow_hub
 #-e git+https://github.com/tensorflow/tfjs.git#egg=tensorflowjs\&subdirectory=tfjs-converter/python
